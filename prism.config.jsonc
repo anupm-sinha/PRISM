@@ -52,7 +52,7 @@
     "cache": true,         // prompt-cache hit %
     "apiTime": false,      // time spent awaiting the API
     "directory": false,    // current directory name
-    "version": false,      // Claude Code version
+    "version": false,      // Claude Code version (shown in the title row)
     "pr": false,           // open PR number + review state
     "thinking": false      // ✦ marker when extended thinking is on
   }

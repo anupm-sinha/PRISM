@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -330,6 +330,7 @@ function render(input, cfg) {
 
   // Identity (title) pieces.
   const brandModel = paint(g.brand, t.brand) + ' ' + paint(data.model, t.model, true)
+    + (s.version && data.version ? '  ' + paint(`v${data.version}`, t.dim) : '')
     + (s.thinking && data.thinking ? ' ' + paint(g.think, t.accent) : '');
   let effortStr = '';
   if (s.effort && data.effort) {
@@ -396,7 +397,6 @@ function render(input, cfg) {
     row3.push(paint(`${g.add}${data.added}`, t.add) + ' ' + paint(`${g.del}${data.removed}`, t.del));
   }
   if (s.directory) row3.push((textLabels ? paint('Dir ', t.label) : '') + paint(data.dir, t.dim));
-  if (s.version && data.version) row3.push(textLabels ? paint('Version ', t.label) + paint(data.version, t.dim) : paint(`${g.ver}${data.version}`, t.dim));
   if (s.pr && data.pr?.number) {
     const rc = data.pr.review_state === 'approved' ? t.healthy
       : data.pr.review_state === 'changes_requested' ? t.crit : t.warn;
@@ -449,7 +449,9 @@ function render(input, cfg) {
 
 /** Visible model+brand text without color, for width math. */
 function brandModelPlain(data, g, s) {
-  return `${g.brand} ${data.model}` + (s.thinking && data.thinking ? ` ${g.think}` : '');
+  return `${g.brand} ${data.model}`
+    + (s.version && data.version ? `  v${data.version}` : '')
+    + (s.thinking && data.thinking ? ` ${g.think}` : '');
 }
 
 /** Single-line fallback for narrow terminals. */
