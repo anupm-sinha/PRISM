@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.1.0';
+const VERSION = '1.1.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -120,7 +120,7 @@ const GLYPHS = {
   unicode: { brand: '✳', effort: '⚡', clock: '◷', branch: '⎇', barL: '▕', barR: '▏', fill: '█', empty: '░', add: '+', del: '−', reset: '⟳', sep: '·', pr: '⬡', think: '✦', token: '◈', cache: '≣', ver: '●', tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
   ascii:   { brand: '*', effort: '!', clock: 't', branch: 'on', barL: '[', barR: ']', fill: '#', empty: '-', add: '+', del: '-', reset: '~', sep: '|', pr: 'PR', think: '*', token: 'T', cache: 'C', ver: 'v', tl: '+', tr: '+', bl: '+', br: '+', h: '-', v: '|' },
   // Nerd Font (Powerline + Font Awesome + Octicons codepoints). Requires a Nerd Font.
-  nerd:    { brand: '', effort: '', clock: '', branch: '', barL: '', barR: '', fill: '█', empty: '░', add: '', del: '', reset: '', sep: '·', pr: '', think: '', token: '', cache: '', ver: '', tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
+  nerd:    { brand: '', effort: '', clock: '', branch: '', barL: '', barR: '', fill: '█', empty: '░', add: '+', del: '−', reset: '', sep: '·', pr: '', think: '', token: '', cache: '', ver: '', tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
 };
 
 function resolveGlyphs(mode) {
