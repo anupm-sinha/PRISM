@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -137,16 +137,17 @@ const DEFAULTS = {
   theme: 'neon',
   glyphs: 'auto',           // auto | nerd | unicode | ascii
   spacing: 5,               // spaces between info groups (breathing room)
+  minWidth: 60,             // minimum panel width — keeps it from rendering tiny on first load
   barWidth: 16,             // context bar width in cells
-  smallBarWidth: 4,         // 5h / 7d bar width
+  smallBarWidth: 6,         // 5h / 7d bar width
   thresholds: { warn: 70, crit: 90 },      // context %
   rateThresholds: { warn: 60, crit: 80 },  // rate-limit %
   stats: {
     model: true, effort: true, context: true,
     fiveHour: true, sevenDay: true,
-    fiveHourReset: false, sevenDayReset: false,
+    fiveHourReset: true, sevenDayReset: true,
     session: true, cost: true, branch: true, lines: true,
-    tokens: false, cache: false, apiTime: false,
+    tokens: true, cache: true, apiTime: false,
     directory: false, version: false, pr: false, thinking: false,
   },
 };
@@ -268,12 +269,23 @@ function gitBranch(cwd, sessionId) {
 }
 
 // ───────────────────────────────────────────────────────────────── Render ──
+// Left-aligned eighth blocks give sub-cell resolution for smooth fills.
+const PARTIAL = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'];
 function meter(pct, width, from, to, empty, g, gradient) {
   const p = Math.max(0, Math.min(100, pct || 0));
-  const fw = Math.round(p / 100 * width);
-  const fill = g.fill.repeat(fw);
-  const emp = g.empty.repeat(width - fw);
-  const fStr = gradient ? gradientText(fill, from, to) : paint(fill, from);
+  const usePartial = g.fill === '█';
+  const exact = (p / 100) * width;
+  let full = Math.floor(exact);
+  let part = '';
+  if (usePartial && full < width) {
+    const idx = Math.round((exact - full) * 8);
+    if (idx === 8) full += 1;
+    else if (idx > 0) part = PARTIAL[idx];
+  }
+  if (full > width) full = width;
+  const fillChars = g.fill.repeat(full) + part;
+  const emp = g.empty.repeat(Math.max(0, width - full - (part ? 1 : 0)));
+  const fStr = gradient ? gradientText(fillChars, from, to) : paint(fillChars, from);
   return fStr + paint(emp, empty);
 }
 
@@ -321,38 +333,44 @@ function render(input, cfg) {
     effortStr = paint(`${g.effort} ${data.effort}`, ec, true);
   }
 
-  // Row 2: live meters.
+  // Bar segment builder. Nerd Font mode gets rounded "pill" caps; others get
+  // thin caps. Fills are smooth thanks to sub-cell partial blocks in meter().
+  const rounded = g === GLYPHS.nerd;
+  const capL = rounded ? '' : g.barL;   //  left half-circle
+  const capR = rounded ? '' : g.barR;   //  right half-circle
+  const barSeg = (label, pct, width, from, to, gradient, pctRgb) =>
+    paint(label, t.label) + ' ' +
+    paint(capL, rounded ? (pct > 0 ? from : t.ctxEmpty) : t.dim) +
+    meter(pct, width, from, to, t.ctxEmpty, g, gradient) +
+    paint(capR, rounded ? t.ctxEmpty : t.dim) + ' ' +
+    paint(`${Math.round(pct)}%`, pctRgb);
+
+  // Row 2: context + rate-limit meters (with optional reset countdowns).
   const row2 = [];
   if (s.context) {
-    const pc = thresholdRgb(data.ctx, t, cfg.thresholds.warn, cfg.thresholds.crit);
-    row2.push(
-      paint('ctx', t.label) + ' ' + paint(g.barL, t.dim) +
-      meter(data.ctx, cfg.barWidth, t.ctxFrom, t.ctxTo, t.ctxEmpty, g, true) +
-      paint(g.barR, t.dim) + ' ' + paint(`${Math.round(data.ctx)}%`, pc)
-    );
+    row2.push(barSeg('ctx', data.ctx, cfg.barWidth, t.ctxFrom, t.ctxTo, true,
+      thresholdRgb(data.ctx, t, cfg.thresholds.warn, cfg.thresholds.crit)));
   }
   if (s.fiveHour && typeof data.five === 'number') {
     const c = thresholdRgb(data.five, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
-    row2.push(paint('5h', t.label) + ' ' + paint(g.barL, t.dim) +
-      meter(data.five, cfg.smallBarWidth, c, c, t.ctxEmpty, g, false) +
-      paint(g.barR, t.dim) + ' ' + paint(`${Math.round(data.five)}%`, c) +
-      (s.fiveHourReset && data.fiveReset ? ' ' + paint(`${g.reset}${fmtReset(data.fiveReset)}`, t.dim) : ''));
+    let seg = barSeg('5h', data.five, cfg.smallBarWidth, c, c, false, c);
+    if (s.fiveHourReset && data.fiveReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.fiveReset)}`, t.dim);
+    row2.push(seg);
   }
   if (s.sevenDay && typeof data.seven === 'number') {
     const c = thresholdRgb(data.seven, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
-    row2.push(paint('7d', t.label) + ' ' + paint(g.barL, t.dim) +
-      meter(data.seven, cfg.smallBarWidth, c, c, t.ctxEmpty, g, false) +
-      paint(g.barR, t.dim) + ' ' + paint(`${Math.round(data.seven)}%`, c) +
-      (s.sevenDayReset && data.sevenReset ? ' ' + paint(`${g.reset}${fmtReset(data.sevenReset)}`, t.dim) : ''));
+    let seg = barSeg('7d', data.seven, cfg.smallBarWidth, c, c, false, c);
+    if (s.sevenDayReset && data.sevenReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.sevenReset)}`, t.dim);
+    row2.push(seg);
   }
-  if (s.tokens && data.tokens) row2.push(paint(g.token, t.dim) + ' ' + paint(fmtTokens(data.tokens), t.text));
-  if (s.cache && data.cache != null) row2.push(paint('cache', t.label) + ' ' + paint(`${Math.round(data.cache)}%`, t.accent));
-  if (s.apiTime && data.apiMs) row2.push(paint('api', t.label) + ' ' + paint(fmtDur(data.apiMs), t.dim));
 
-  // Row 3: session / git / meta.
+  // Row 3: session, cost, tokens, cache, git and meta.
   const row3 = [];
   if (s.session && data.durMs != null) row3.push(paint(g.clock, t.dim) + ' ' + paint(fmtDur(data.durMs), t.time));
   if (s.cost && data.cost != null) row3.push(paint(`$${Number(data.cost).toFixed(2)}`, t.cost));
+  if (s.tokens && data.tokens) row3.push(paint(g.token, t.dim) + ' ' + paint(fmtTokens(data.tokens), t.text));
+  if (s.cache && data.cache != null) row3.push(paint('cache', t.label) + ' ' + paint(`${Math.round(data.cache)}%`, t.accent));
+  if (s.apiTime && data.apiMs) row3.push(paint('api', t.label) + ' ' + paint(fmtDur(data.apiMs), t.dim));
   if (s.branch) {
     const b = data.dir && input?.workspace ? gitBranch(cwd, input?.session_id) : '';
     if (b) row3.push(paint(g.branch + ' ' + b, t.branch));
@@ -373,14 +391,16 @@ function render(input, cfg) {
   const line2 = row2.length ? paint(g.v, t.frame) + '  ' + row2.join(gap) : '';
   const line3 = row3.length ? paint(g.v, t.frame) + '  ' + row3.join(gap) : '';
 
-  // Width-aware: fall back to a compact one-liner if the panel won't fit.
+  // Width-aware sizing, with a sensible minimum so the panel never renders tiny
+  // (e.g. on first load, before context/limits/cost data has arrived).
   const cols = parseInt(process.env.COLUMNS || '', 10) || 0;
   const contentW = Math.max(
     line2 ? visLen(railRaw) + visLen(row2.join(gap)) : 0,
     line3 ? visLen(railRaw) + visLen(row3.join(gap)) : 0,
   );
   const titleMin = 8 + visLen(brandModelPlain(data, g, s)) + (effortStr ? visLen(`${g.effort} ${data.effort}`) : 0) + 2;
-  let panelW = Math.max(contentW + 3, titleMin);
+  const floorW = cols ? Math.min(cfg.minWidth || 0, cols - 2) : (cfg.minWidth || 0);
+  let panelW = Math.max(contentW + 3, titleMin, floorW);
   if (cols && panelW > cols - 1) return compact(data, t, g, s, cfg, gap);
 
   // Title rule with effort pinned to the right.

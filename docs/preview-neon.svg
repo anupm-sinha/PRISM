@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 216" width="820" height="216" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 216" width="900" height="216" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace">
   <defs>
     <linearGradient id="ctxgrad" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#9650ff"/>
@@ -13,20 +13,18 @@
     </filter>
   </defs>
 
-  <!-- panel -->
-  <rect x="10" y="10" width="800" height="196" rx="16" fill="#07090f" stroke="#1b1f33" stroke-width="1.5" filter="url(#shadow)"/>
-  <rect x="10.75" y="10.75" width="798.5" height="40" rx="15" fill="#ffffff" opacity="0.015"/>
+  <rect x="10" y="10" width="880" height="196" rx="16" fill="#07090f" stroke="#1b1f33" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="10.75" y="10.75" width="878.5" height="40" rx="15" fill="#ffffff" opacity="0.015"/>
 
-  <!-- window dots + wordmark -->
   <circle cx="38" cy="36" r="5.5" fill="#ff5f56"/>
   <circle cx="58" cy="36" r="5.5" fill="#ffbd2e"/>
   <circle cx="78" cy="36" r="5.5" fill="#27c93f"/>
-  <text x="784" y="40" text-anchor="end" font-size="12" fill="#3a3566">PRISM &#183; neon</text>
+  <text x="864" y="40" text-anchor="end" font-size="12" fill="#3a3566">PRISM &#183; neon</text>
 
-  <!-- title: model + effort -->
+  <!-- title -->
   <text x="36" y="88" font-size="18" fill="#4ff0ff" filter="url(#glow)">&#10035;</text>
   <text x="60" y="88" font-size="18" font-weight="700" fill="#ff5fd2" filter="url(#glow)">Opus 4.8</text>
-  <text x="784" y="88" text-anchor="end" font-size="16" fill="#ffe066" filter="url(#glow)">&#9889; high</text>
+  <text x="864" y="88" text-anchor="end" font-size="16" fill="#ffe066" filter="url(#glow)">&#9889; high</text>
 
   <!-- meters -->
   <text x="36" y="131" font-size="15" fill="#5a637e">ctx</text>
@@ -34,20 +32,25 @@
   <rect x="74" y="119" width="72" height="15" rx="7.5" fill="url(#ctxgrad)" filter="url(#glow)"/>
   <text x="276" y="131" font-size="15" fill="#4ff0ff">38%</text>
 
-  <text x="340" y="131" font-size="15" fill="#5a637e">5h</text>
-  <rect x="368" y="119" width="80" height="15" rx="7.5" fill="#23283b"/>
-  <rect x="368" y="119" width="42" height="15" rx="7.5" fill="#54f8a0"/>
-  <text x="458" y="131" font-size="15" fill="#54f8a0">52%</text>
+  <text x="338" y="131" font-size="15" fill="#5a637e">5h</text>
+  <rect x="366" y="119" width="78" height="15" rx="7.5" fill="#23283b"/>
+  <rect x="366" y="119" width="41" height="15" rx="7.5" fill="#54f8a0"/>
+  <text x="454" y="131" font-size="15" fill="#54f8a0">52%</text>
+  <text x="500" y="131" font-size="14" fill="#5a637e">&#10227; 2h</text>
 
-  <text x="522" y="131" font-size="15" fill="#5a637e">7d</text>
-  <rect x="550" y="119" width="80" height="15" rx="7.5" fill="#23283b"/>
-  <rect x="550" y="119" width="59" height="15" rx="7.5" fill="#ffb454"/>
-  <text x="640" y="131" font-size="15" fill="#ffb454">74%</text>
+  <text x="566" y="131" font-size="15" fill="#5a637e">7d</text>
+  <rect x="594" y="119" width="78" height="15" rx="7.5" fill="#23283b"/>
+  <rect x="594" y="119" width="58" height="15" rx="7.5" fill="#ffb454"/>
+  <text x="682" y="131" font-size="15" fill="#ffb454">74%</text>
+  <text x="728" y="131" font-size="14" fill="#5a637e">&#10227; 4d</text>
 
-  <!-- session line -->
+  <!-- session -->
   <text x="36" y="174" font-size="15" fill="#aab4cf">&#9719; 18m</text>
-  <text x="152" y="174" font-size="15" fill="#54f8a0">$1.27</text>
-  <text x="248" y="174" font-size="15" fill="#b794ff">&#9095; main</text>
-  <text x="360" y="174" font-size="15" fill="#54f8a0">+156</text>
-  <text x="416" y="174" font-size="15" fill="#5a637e">&#8722;23</text>
+  <text x="150" y="174" font-size="15" fill="#54f8a0">$1.27</text>
+  <text x="250" y="174" font-size="15" fill="#c9d1d9">&#9672; 76k</text>
+  <text x="356" y="174" font-size="15" fill="#5a637e">cache</text>
+  <text x="412" y="174" font-size="15" fill="#4ff0ff">72%</text>
+  <text x="478" y="174" font-size="15" fill="#b794ff">&#9095; main</text>
+  <text x="588" y="174" font-size="15" fill="#54f8a0">+156</text>
+  <text x="644" y="174" font-size="15" fill="#5a637e">&#8722;23</text>
 </svg>

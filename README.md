@@ -24,7 +24,7 @@ It's a single **zero‑dependency** Node.js file, inspired by the lovely [METRIC
 ## ✨ Features
 
 - 🎛️ **HUD dashboard layout** — a framed, multi‑line panel that actually looks designed.
-- 🟣 **Gradient context bar** — per‑character truecolor (purple → magenta by default).
+- 🟣 **Gradient context bar** — smooth per‑character truecolor (purple → magenta), with sub‑cell fills and rounded pill caps in Nerd Font mode.
 - 🚦 **Threshold colors** — every metric shifts green → amber → red as it fills.
 - 🎨 **Three themes** — `neon` (default), `spectrum`, `mono` — plus fully tunable palettes.
 - 📊 **16 toggleable stats** — context, 5h/7d limits, cost, session, git, tokens, cache %, PR, and more.
@@ -110,9 +110,9 @@ Default loadout is **on**; everything else is a one‑line toggle in `prism.conf
 | `cost` | ✅ | Estimated session cost (USD) |
 | `branch` | ✅ | Current git branch |
 | `lines` | ✅ | `+added` / `−removed` lines |
-| `fiveHourReset` / `sevenDayReset` | ⬜ | Countdown to limit reset |
-| `tokens` | ⬜ | Input tokens in context |
-| `cache` | ⬜ | Prompt‑cache hit % |
+| `fiveHourReset` / `sevenDayReset` | ✅ | Countdown to limit reset |
+| `tokens` | ✅ | Input tokens in context |
+| `cache` | ✅ | Prompt‑cache hit % |
 | `apiTime` | ⬜ | Time spent awaiting the API |
 | `directory` | ⬜ | Current directory name |
 | `version` | ⬜ | Claude Code version |
