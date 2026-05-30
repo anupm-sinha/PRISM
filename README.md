@@ -24,7 +24,7 @@ It's a single **zero‑dependency** Node.js file, inspired by the lovely [METRIC
 ## ✨ Features
 
 - 🎛️ **HUD dashboard layout** — a framed, multi‑line panel that actually looks designed.
-- 🟣 **Gradient context bar** — smooth per‑character truecolor (purple → magenta), with sub‑cell fills and rounded pill caps in Nerd Font mode.
+- 🟣 **Gradient context bar** — smooth per‑character truecolor (purple → magenta). Pick solid `block` bars or sleek thin `line` bars; rounded pill caps in Nerd Font mode.
 - 🚦 **Threshold colors** — every metric shifts green → amber → red as it fills.
 - 🎨 **Three themes** — `neon` (default), `spectrum`, `mono` — plus fully tunable palettes.
 - 📊 **16 toggleable stats** — context, 5h/7d limits, cost, session, git, tokens, cache %, PR, and more.
@@ -127,9 +127,11 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
 {
   "theme": "neon",            // neon | spectrum | mono
   "glyphs": "auto",           // auto | nerd | unicode | ascii
+  "barStyle": "block",        // block (solid █) | line (sleek thin ━)
   "spacing": 5,               // gap between info groups
+  "minWidth": 60,             // min panel width (no tiny box on first load)
   "barWidth": 16,             // context bar width
-  "smallBarWidth": 4,         // 5h / 7d bar width
+  "smallBarWidth": 6,         // 5h / 7d bar width
   "thresholds":     { "warn": 70, "crit": 90 },  // context %
   "rateThresholds": { "warn": 60, "crit": 80 },  // rate-limit %
   "stats": { "pr": true, "tokens": true /* … */ }

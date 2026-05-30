@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.1.1';
+const VERSION = '1.2.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -138,6 +138,7 @@ const DEFAULTS = {
   glyphs: 'auto',           // auto | nerd | unicode | ascii
   spacing: 5,               // spaces between info groups (breathing room)
   minWidth: 60,             // minimum panel width — keeps it from rendering tiny on first load
+  barStyle: 'block',        // "block" (solid █) or "line" (sleek thin ━)
   barWidth: 16,             // context bar width in cells
   smallBarWidth: 6,         // 5h / 7d bar width
   thresholds: { warn: 70, crit: 90 },      // context %
@@ -336,13 +337,15 @@ function render(input, cfg) {
   // Bar segment builder. Nerd Font mode gets rounded "pill" caps; others get
   // thin caps. Fills are smooth thanks to sub-cell partial blocks in meter().
   const rounded = g === GLYPHS.nerd;
+  const lineStyle = cfg.barStyle === 'line';
+  const barG = lineStyle ? { ...g, fill: '━', empty: '─' } : g;
   const capL = rounded ? '' : g.barL;   //  left half-circle
   const capR = rounded ? '' : g.barR;   //  right half-circle
   const barSeg = (label, pct, width, from, to, gradient, pctRgb) =>
     paint(label, t.label) + ' ' +
-    paint(capL, rounded ? (pct > 0 ? from : t.ctxEmpty) : t.dim) +
-    meter(pct, width, from, to, t.ctxEmpty, g, gradient) +
-    paint(capR, rounded ? t.ctxEmpty : t.dim) + ' ' +
+    (lineStyle ? '' : paint(capL, rounded ? (pct > 0 ? from : t.ctxEmpty) : t.dim)) +
+    meter(pct, width, from, to, t.ctxEmpty, barG, gradient) +
+    (lineStyle ? '' : paint(capR, rounded ? t.ctxEmpty : t.dim)) + ' ' +
     paint(`${Math.round(pct)}%`, pctRgb);
 
   // Row 2: context + rate-limit meters (with optional reset countdowns).
