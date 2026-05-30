@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.6.1';
+const VERSION = '1.7.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -381,12 +381,12 @@ function render(input, cfg) {
     if (s.sevenDayReset && data.sevenReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.sevenReset)}`, t.dim);
     row2.push(seg);
   }
+  if (s.cost && data.cost != null) row2.push((textLabels ? paint('Cost ', t.label) : '') + paint(`$${Number(data.cost).toFixed(2)}`, t.cost));
+  if (s.tokens && data.tokens) row2.push(lead('Tokens', g.token) + ' ' + paint(fmtTokens(data.tokens), t.text));
 
-  // Row 3: session, cost, tokens, cache, git and meta.
+  // Row 3 (optional second line): session, cache, git and meta.
   const row3 = [];
   if (s.session && data.durMs != null) row3.push(lead('Session', g.clock) + ' ' + paint(fmtDur(data.durMs), t.time));
-  if (s.cost && data.cost != null) row3.push((textLabels ? paint('Cost ', t.label) : '') + paint(`$${Number(data.cost).toFixed(2)}`, t.cost));
-  if (s.tokens && data.tokens) row3.push(lead('Tokens', g.token) + ' ' + paint(fmtTokens(data.tokens), t.text));
   if (s.cache && data.cache != null) row3.push(paint(textLabels ? 'Cache' : 'cache', t.label) + ' ' + paint(`${Math.round(data.cache)}%`, t.accent));
   if (s.apiTime && data.apiMs) row3.push(paint(textLabels ? 'API' : 'api', t.label) + ' ' + paint(fmtDur(data.apiMs), t.dim));
   if (s.branch) {
