@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -137,6 +137,7 @@ const DEFAULTS = {
   theme: 'neon',
   glyphs: 'auto',           // auto | nerd | unicode | ascii
   labels: 'icon',           // "icon" (compact glyphs) or "text" (worded: 5h Usage, Cost, …)
+  align: false,             // align row 2 & row 3 into shared columns (grid)
   spacing: 5,               // spaces between info groups (breathing room)
   minWidth: 60,             // minimum panel width — keeps it from rendering tiny on first load
   barStyle: 'block',        // "block" (solid █) or "line" (sleek thin ━)
@@ -284,6 +285,7 @@ function meter(pct, width, from, to, empty, g, gradient) {
     if (idx === 8) full += 1;
     else if (idx > 0) part = PARTIAL[idx];
   }
+  if (!usePartial && p > 0 && full === 0) full = 1;   // min visible fill for line/pill bars
   if (full > width) full = width;
   const fillChars = g.fill.repeat(full) + part;
   const emp = g.empty.repeat(Math.max(0, width - full - (part ? 1 : 0)));
@@ -340,13 +342,14 @@ function render(input, cfg) {
   const rounded = g === GLYPHS.nerd;
   const lineStyle = cfg.barStyle === 'line';
   const pillStyle = cfg.barStyle === 'pill';
-  const roundedCaps = rounded || pillStyle;
+  const roundedStyle = cfg.barStyle === 'rounded';
+  const roundedCaps = rounded || roundedStyle;
   const barG = lineStyle ? { ...g, fill: '━', empty: '─' }
     : pillStyle ? { ...g, fill: '▬', empty: '▬' } : g;
   const capL = rounded ? '' : g.barL;   //  left half-circle
   const capR = rounded ? '' : g.barR;   //  right half-circle
-  const pcapL = pillStyle ? '◖' : capL;
-  const pcapR = pillStyle ? '◗' : capR;
+  const pcapL = roundedStyle ? '◖' : (pillStyle ? '' : capL);
+  const pcapR = roundedStyle ? '◗' : (pillStyle ? '' : capR);
   const barSeg = (label, pct, width, from, to, gradient, pctRgb) =>
     paint(label, t.label) + ' ' +
     (lineStyle ? '' : paint(pcapL, roundedCaps ? (pct > 0 ? from : t.ctxEmpty) : t.dim)) +
@@ -399,6 +402,16 @@ function render(input, cfg) {
       : data.pr.review_state === 'changes_requested' ? t.crit : t.warn;
     row3.push(paint(`${textLabels ? 'PR' : g.pr} #${data.pr.number}`, t.accent) +
       (data.pr.review_state ? ' ' + paint(data.pr.review_state, rc) : ''));
+  }
+
+  // Optionally align the two content rows into shared columns.
+  if (cfg.align && row2.length && row3.length) {
+    const n = Math.max(row2.length, row3.length);
+    for (let i = 0; i < n - 1; i++) {
+      const w = Math.max(row2[i] != null ? visLen(row2[i]) : 0, row3[i] != null ? visLen(row3[i]) : 0);
+      if (row2[i] != null) row2[i] += ' '.repeat(Math.max(0, w - visLen(row2[i])));
+      if (row3[i] != null) row3[i] += ' '.repeat(Math.max(0, w - visLen(row3[i])));
+    }
   }
 
   const railRaw = g.v + '  ';

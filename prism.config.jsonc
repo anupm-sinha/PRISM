@@ -15,13 +15,16 @@
   // Labels: "icon" (compact glyphs) or "text" (worded — 5h Usage, Cost, Session…).
   "labels": "icon",
 
+  // Align the meters row and session row into shared columns.
+  "align": false,
+
   // Spaces between info groups on each row (breathing room).
   "spacing": 5,
 
   // Minimum panel width — stops the box rendering tiny before data arrives.
   "minWidth": 60,
 
-  // Bar look: "block" (solid █), "pill" (rounded ◖▬◗, ~half height), or "line" (thin ━).
+  // Bar look: "block" (█), "rounded" (◖█◗), "pill" (flat ▬ half-height), or "line" (thin ━).
   "barStyle": "block",
 
   // Bar widths, in cells.
