@@ -36,8 +36,8 @@
     "context": true,       // gradient context-window bar + %
     "fiveHour": true,      // 5h rate-limit bar + %
     "sevenDay": true,      // 7d rate-limit bar + %
-    "fiveHourReset": true, // append countdown to 5h reset
-    "sevenDayReset": true, // append countdown to 7d reset
+    "fiveHourReset": false,// append countdown to 5h reset
+    "sevenDayReset": false,// append countdown to 7d reset
     "session": true,       // ◷ session duration
     "cost": true,          // $ estimated session cost
     "branch": true,        // ⎇ current git branch

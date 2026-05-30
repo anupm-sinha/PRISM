@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -146,7 +146,7 @@ const DEFAULTS = {
   stats: {
     model: true, effort: true, context: true,
     fiveHour: true, sevenDay: true,
-    fiveHourReset: true, sevenDayReset: true,
+    fiveHourReset: false, sevenDayReset: false,
     session: true, cost: true, branch: true, lines: true,
     tokens: true, cache: true, apiTime: false,
     directory: false, version: false, pr: false, thinking: false,
