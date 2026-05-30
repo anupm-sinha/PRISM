@@ -21,7 +21,7 @@
   // Minimum panel width — stops the box rendering tiny before data arrives.
   "minWidth": 60,
 
-  // Bar look: "block" (solid █) or "line" (sleek thin ━, no font needed).
+  // Bar look: "block" (solid █), "pill" (rounded ◖▬◗, ~half height), or "line" (thin ━).
   "barStyle": "block",
 
   // Bar widths, in cells.

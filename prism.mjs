@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -339,14 +339,19 @@ function render(input, cfg) {
   // thin caps. Fills are smooth thanks to sub-cell partial blocks in meter().
   const rounded = g === GLYPHS.nerd;
   const lineStyle = cfg.barStyle === 'line';
-  const barG = lineStyle ? { ...g, fill: '━', empty: '─' } : g;
+  const pillStyle = cfg.barStyle === 'pill';
+  const roundedCaps = rounded || pillStyle;
+  const barG = lineStyle ? { ...g, fill: '━', empty: '─' }
+    : pillStyle ? { ...g, fill: '▬', empty: '▬' } : g;
   const capL = rounded ? '' : g.barL;   //  left half-circle
   const capR = rounded ? '' : g.barR;   //  right half-circle
+  const pcapL = pillStyle ? '◖' : capL;
+  const pcapR = pillStyle ? '◗' : capR;
   const barSeg = (label, pct, width, from, to, gradient, pctRgb) =>
     paint(label, t.label) + ' ' +
-    (lineStyle ? '' : paint(capL, rounded ? (pct > 0 ? from : t.ctxEmpty) : t.dim)) +
+    (lineStyle ? '' : paint(pcapL, roundedCaps ? (pct > 0 ? from : t.ctxEmpty) : t.dim)) +
     meter(pct, width, from, to, t.ctxEmpty, barG, gradient) +
-    (lineStyle ? '' : paint(capR, rounded ? t.ctxEmpty : t.dim)) + ' ' +
+    (lineStyle ? '' : paint(pcapR, roundedCaps ? t.ctxEmpty : t.dim)) + ' ' +
     paint(`${Math.round(pct)}%`, pctRgb);
 
   const textLabels = cfg.labels === 'text';
