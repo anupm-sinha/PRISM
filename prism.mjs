@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -87,7 +87,7 @@ function isWide(cp) {
 // bar; `effort` maps reasoning levels to a color.
 const THEMES = {
   neon: {
-    frame: [58, 53, 102], dim: [90, 99, 126], label: [123, 133, 153], text: [201, 209, 217],
+    frame: [58, 53, 102], dim: [90, 99, 126], faint: [70, 67, 100], label: [123, 133, 153], text: [201, 209, 217],
     brand: [79, 240, 255], model: [255, 95, 210],
     ctxFrom: [150, 80, 255], ctxTo: [221, 100, 255], ctxEmpty: [35, 40, 59],   // purple → magenta
     healthy: [84, 248, 160], warn: [255, 180, 84], crit: [255, 95, 109],
@@ -96,7 +96,7 @@ const THEMES = {
     effort: { low: [123, 133, 153], medium: [79, 240, 255], high: [255, 224, 102], xhigh: [255, 180, 84], max: [255, 95, 109] },
   },
   spectrum: {
-    frame: [68, 80, 107], dim: [86, 96, 122], label: [125, 133, 150], text: [201, 209, 217],
+    frame: [68, 80, 107], dim: [86, 96, 122], faint: [72, 80, 104], label: [125, 133, 150], text: [201, 209, 217],
     brand: [129, 219, 255], model: [199, 146, 234],
     ctxFrom: [40, 199, 255], ctxTo: [37, 99, 235], ctxEmpty: [43, 49, 64],
     healthy: [63, 185, 80], warn: [210, 153, 34], crit: [248, 81, 73],
@@ -105,7 +105,7 @@ const THEMES = {
     effort: { low: [110, 118, 129], medium: [88, 166, 255], high: [210, 153, 34], xhigh: [219, 109, 40], max: [248, 81, 73] },
   },
   mono: {
-    frame: [68, 76, 94], dim: [110, 118, 129], label: [139, 148, 158], text: [201, 209, 217],
+    frame: [68, 76, 94], dim: [110, 118, 129], faint: [82, 88, 102], label: [139, 148, 158], text: [201, 209, 217],
     brand: [150, 200, 255], model: [220, 226, 234],
     ctxFrom: [120, 170, 220], ctxTo: [170, 205, 245], ctxEmpty: [40, 45, 58],
     healthy: [142, 178, 160], warn: [196, 170, 120], crit: [206, 130, 130],
@@ -330,7 +330,7 @@ function render(input, cfg) {
 
   // Identity (title) pieces.
   const brandModel = paint(g.brand, t.brand) + ' ' + paint(data.model, t.model, true)
-    + (s.version && data.version ? '  ' + paint(`v${data.version}`, t.dim) : '')
+    + (s.version && data.version ? '  ' + ESC + '2m' + fg(t.faint || t.dim) + `v${data.version}` + RESET : '')
     + (s.thinking && data.thinking ? ' ' + paint(g.think, t.accent) : '');
   let effortStr = '';
   if (s.effort && data.effort) {
