@@ -1,0 +1,47 @@
+{
+  // ╭───────────────────────────────────────────────────────────────────╮
+  // │  PRISM configuration — all fields optional. Delete what you don't   │
+  // │  need; defaults below are applied for anything you omit. Changes     │
+  // │  apply on the next status-line refresh (no restart needed).          │
+  // ╰───────────────────────────────────────────────────────────────────╯
+
+  // Color theme: "neon" (default), "spectrum", or "mono".
+  "theme": "neon",
+
+  // Icon set: "auto" picks plain Unicode unless PRISM_GLYPHS says otherwise.
+  // Set "nerd" if you run a Nerd Font; "ascii" for maximum compatibility.
+  "glyphs": "auto",
+
+  // Spaces between info groups on each row (breathing room).
+  "spacing": 5,
+
+  // Bar widths, in cells.
+  "barWidth": 16,        // context bar
+  "smallBarWidth": 4,    // 5h / 7d bars
+
+  // Color thresholds (percent). At/above warn → amber, at/above crit → red.
+  "thresholds":     { "warn": 70, "crit": 90 },   // context window
+  "rateThresholds": { "warn": 60, "crit": 80 },   // 5h / 7d rate limits
+
+  // Toggle any stat on/off. The defaults below are the "rich, no PR" loadout.
+  "stats": {
+    "model": true,         // ✳ model name (e.g. Opus 4.8)
+    "effort": true,        // ⚡ reasoning effort (low…max)
+    "context": true,       // gradient context-window bar + %
+    "fiveHour": true,      // 5h rate-limit bar + %
+    "sevenDay": true,      // 7d rate-limit bar + %
+    "fiveHourReset": false,// append countdown to 5h reset
+    "sevenDayReset": false,// append countdown to 7d reset
+    "session": true,       // ◷ session duration
+    "cost": true,          // $ estimated session cost
+    "branch": true,        // ⎇ current git branch
+    "lines": true,         // +added / −removed lines
+    "tokens": false,       // ◈ input tokens in context
+    "cache": false,        // prompt-cache hit %
+    "apiTime": false,      // time spent awaiting the API
+    "directory": false,    // current directory name
+    "version": false,      // Claude Code version
+    "pr": false,           // open PR number + review state
+    "thinking": false      // ✦ marker when extended thinking is on
+  }
+}

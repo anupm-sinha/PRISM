@@ -1,0 +1,8 @@
+node_modules/
+*.log
+*.tmp
+.DS_Store
+.idea/
+.vscode/
+# PRISM's per-session git cache lives in the OS temp dir, but ignore strays:
+prism-git-*.txt

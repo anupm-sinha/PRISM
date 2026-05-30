@@ -1,0 +1,45 @@
+{
+  "name": "prism-statusline",
+  "version": "1.0.0",
+  "description": "A colorful HUD status line for Claude Code — model, reasoning effort, context window, 5h/7d rate limits, cost and git, with neon themes. Zero dependencies.",
+  "type": "module",
+  "bin": {
+    "prism-statusline": "prism.mjs"
+  },
+  "main": "prism.mjs",
+  "files": [
+    "prism.mjs",
+    "prism.config.jsonc",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "demo": "node prism.mjs --demo"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "statusline",
+    "status-line",
+    "hud",
+    "terminal",
+    "cli",
+    "ansi",
+    "truecolor",
+    "neon"
+  ],
+  "license": "MIT",
+  "author": "Anup Mohan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anupm-sinha/PRISM.git"
+  },
+  "homepage": "https://github.com/anupm-sinha/PRISM#readme",
+  "bugs": {
+    "url": "https://github.com/anupm-sinha/PRISM/issues"
+  }
+}
