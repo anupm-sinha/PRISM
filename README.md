@@ -127,6 +127,7 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
 {
   "theme": "neon",            // neon | spectrum | mono
   "glyphs": "auto",           // auto | nerd | unicode | ascii
+  "labels": "icon",           // icon (glyphs) | text (5h Usage, Cost, Session…)
   "barStyle": "block",        // block (solid █) | line (sleek thin ━)
   "spacing": 5,               // gap between info groups
   "minWidth": 60,             // min panel width (no tiny box on first load)

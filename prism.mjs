@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.2.1';
+const VERSION = '1.3.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -136,6 +136,7 @@ function resolveGlyphs(mode) {
 const DEFAULTS = {
   theme: 'neon',
   glyphs: 'auto',           // auto | nerd | unicode | ascii
+  labels: 'icon',           // "icon" (compact glyphs) or "text" (worded: 5h Usage, Cost, …)
   spacing: 5,               // spaces between info groups (breathing room)
   minWidth: 60,             // minimum panel width — keeps it from rendering tiny on first load
   barStyle: 'block',        // "block" (solid █) or "line" (sleek thin ━)
@@ -348,45 +349,50 @@ function render(input, cfg) {
     (lineStyle ? '' : paint(capR, rounded ? t.ctxEmpty : t.dim)) + ' ' +
     paint(`${Math.round(pct)}%`, pctRgb);
 
+  const textLabels = cfg.labels === 'text';
+  // Leading marker for a segment: a worded label (text mode) or a glyph (icon mode).
+  const lead = (word, glyph, glyphColor = t.dim) =>
+    textLabels ? paint(word, t.label) : paint(glyph, glyphColor);
+
   // Row 2: context + rate-limit meters (with optional reset countdowns).
   const row2 = [];
   if (s.context) {
-    row2.push(barSeg('ctx', data.ctx, cfg.barWidth, t.ctxFrom, t.ctxTo, true,
+    row2.push(barSeg(textLabels ? 'Context' : 'ctx', data.ctx, cfg.barWidth, t.ctxFrom, t.ctxTo, true,
       thresholdRgb(data.ctx, t, cfg.thresholds.warn, cfg.thresholds.crit)));
   }
   if (s.fiveHour && typeof data.five === 'number') {
     const c = thresholdRgb(data.five, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
-    let seg = barSeg('5h', data.five, cfg.smallBarWidth, c, c, false, c);
+    let seg = barSeg(textLabels ? '5h Usage' : '5h', data.five, cfg.smallBarWidth, c, c, false, c);
     if (s.fiveHourReset && data.fiveReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.fiveReset)}`, t.dim);
     row2.push(seg);
   }
   if (s.sevenDay && typeof data.seven === 'number') {
     const c = thresholdRgb(data.seven, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
-    let seg = barSeg('7d', data.seven, cfg.smallBarWidth, c, c, false, c);
+    let seg = barSeg(textLabels ? '7d Usage' : '7d', data.seven, cfg.smallBarWidth, c, c, false, c);
     if (s.sevenDayReset && data.sevenReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.sevenReset)}`, t.dim);
     row2.push(seg);
   }
 
   // Row 3: session, cost, tokens, cache, git and meta.
   const row3 = [];
-  if (s.session && data.durMs != null) row3.push(paint(g.clock, t.dim) + ' ' + paint(fmtDur(data.durMs), t.time));
-  if (s.cost && data.cost != null) row3.push(paint(`$${Number(data.cost).toFixed(2)}`, t.cost));
-  if (s.tokens && data.tokens) row3.push(paint(g.token, t.dim) + ' ' + paint(fmtTokens(data.tokens), t.text));
-  if (s.cache && data.cache != null) row3.push(paint('cache', t.label) + ' ' + paint(`${Math.round(data.cache)}%`, t.accent));
-  if (s.apiTime && data.apiMs) row3.push(paint('api', t.label) + ' ' + paint(fmtDur(data.apiMs), t.dim));
+  if (s.session && data.durMs != null) row3.push(lead('Session', g.clock) + ' ' + paint(fmtDur(data.durMs), t.time));
+  if (s.cost && data.cost != null) row3.push((textLabels ? paint('Cost ', t.label) : '') + paint(`$${Number(data.cost).toFixed(2)}`, t.cost));
+  if (s.tokens && data.tokens) row3.push(lead('Tokens', g.token) + ' ' + paint(fmtTokens(data.tokens), t.text));
+  if (s.cache && data.cache != null) row3.push(paint(textLabels ? 'Cache' : 'cache', t.label) + ' ' + paint(`${Math.round(data.cache)}%`, t.accent));
+  if (s.apiTime && data.apiMs) row3.push(paint(textLabels ? 'API' : 'api', t.label) + ' ' + paint(fmtDur(data.apiMs), t.dim));
   if (s.branch) {
     const b = data.dir && input?.workspace ? gitBranch(cwd, input?.session_id) : '';
-    if (b) row3.push(paint(g.branch + ' ' + b, t.branch));
+    if (b) row3.push(lead('Branch', g.branch, t.branch) + ' ' + paint(b, t.branch));
   }
   if (s.lines && (data.added || data.removed)) {
     row3.push(paint(`${g.add}${data.added}`, t.add) + ' ' + paint(`${g.del}${data.removed}`, t.del));
   }
-  if (s.directory) row3.push(paint(data.dir, t.dim));
-  if (s.version && data.version) row3.push(paint(`${g.ver}${data.version}`, t.dim));
+  if (s.directory) row3.push((textLabels ? paint('Dir ', t.label) : '') + paint(data.dir, t.dim));
+  if (s.version && data.version) row3.push(textLabels ? paint('Version ', t.label) + paint(data.version, t.dim) : paint(`${g.ver}${data.version}`, t.dim));
   if (s.pr && data.pr?.number) {
     const rc = data.pr.review_state === 'approved' ? t.healthy
       : data.pr.review_state === 'changes_requested' ? t.crit : t.warn;
-    row3.push(paint(`${g.pr} #${data.pr.number}`, t.accent) +
+    row3.push(paint(`${textLabels ? 'PR' : g.pr} #${data.pr.number}`, t.accent) +
       (data.pr.review_state ? ' ' + paint(data.pr.review_state, rc) : ''));
   }
 
