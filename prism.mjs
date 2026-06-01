@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -248,6 +248,15 @@ function fmtReset(epoch) {
   return ms <= 0 ? 'now' : fmtDur(ms);
 }
 
+/** Hours until `epoch` reset, as a parenthesised "(~Nh)" / "(<1h)" hint ('' if past/unknown). */
+function fmtHoursLeft(epoch) {
+  if (!epoch) return '';
+  const ms = epoch * 1000 - Date.now();
+  if (ms <= 0) return '';
+  const h = ms / 3_600_000;
+  return h < 1 ? '(<1h)' : `(~${Math.round(h)}h)`;
+}
+
 function fmtTokens(n) {
   if (!n) return '0';
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k`;
@@ -269,6 +278,30 @@ function gitBranch(cwd, sessionId) {
   } catch { branch = ''; }
   try { fs.writeFileSync(cache, branch); } catch { /* ignore */ }
   return branch;
+}
+
+/**
+ * 5h/7d rate-limit usage. Claude Code may omit `rate_limits` on early renders
+ * (e.g. first load), so we cache the last-known values per session in tmp and
+ * reuse them when a later payload arrives without them.
+ */
+function rateLimits(input, sessionId) {
+  const cur = input?.rate_limits || {};
+  const live = {
+    five: cur.five_hour?.used_percentage,
+    fiveReset: cur.five_hour?.resets_at,
+    seven: cur.seven_day?.used_percentage,
+    sevenReset: cur.seven_day?.resets_at,
+  };
+  const have = typeof live.five === 'number' || typeof live.seven === 'number';
+  if (!sessionId) return live;   // no session key → don't read or write the cache
+  const cache = path.join(os.tmpdir(), `prism-rate-${sessionId.replace(/[^\w-]/g, '')}.json`);
+  if (have) {
+    try { fs.writeFileSync(cache, JSON.stringify(live)); } catch { /* ignore */ }
+    return live;
+  }
+  try { return JSON.parse(fs.readFileSync(cache, 'utf8')); } catch { /* miss */ }
+  return live;
 }
 
 // ───────────────────────────────────────────────────────────────── Render ──
@@ -307,15 +340,16 @@ function render(input, cfg) {
   const gap = ' '.repeat(Math.max(1, cfg.spacing | 0));
 
   const cwd = input?.workspace?.current_dir || input?.cwd || process.cwd();
+  const rl = rateLimits(input, input?.session_id);
   const data = {
     model: modelName(input),
     effort: input?.effort?.level || null,
     thinking: !!input?.thinking?.enabled,
     ctx: contextPct(input),
-    five: input?.rate_limits?.five_hour?.used_percentage,
-    fiveReset: input?.rate_limits?.five_hour?.resets_at,
-    seven: input?.rate_limits?.seven_day?.used_percentage,
-    sevenReset: input?.rate_limits?.seven_day?.resets_at,
+    five: rl.five,
+    fiveReset: rl.fiveReset,
+    seven: rl.seven,
+    sevenReset: rl.sevenReset,
     durMs: input?.cost?.total_duration_ms,
     apiMs: input?.cost?.total_api_duration_ms,
     cost: input?.cost?.total_cost_usd,
@@ -351,12 +385,19 @@ function render(input, cfg) {
   const capR = rounded ? '' : g.barR;   //  right half-circle
   const pcapL = roundedStyle ? '◖' : (pillStyle ? '' : capL);
   const pcapR = roundedStyle ? '◗' : (pillStyle ? '' : capR);
-  const barSeg = (label, pct, width, from, to, gradient, pctRgb) =>
+  const barSeg = (label, pct, width, from, to, gradient, pctRgb, extra = '') =>
     paint(label, t.label) + ' ' +
     (lineStyle ? '' : paint(pcapL, roundedCaps ? (pct > 0 ? from : t.ctxEmpty) : t.dim)) +
     meter(pct, width, from, to, t.ctxEmpty, barG, gradient) +
     (lineStyle ? '' : paint(pcapR, roundedCaps ? t.ctxEmpty : t.dim)) + ' ' +
-    paint(`${Math.round(pct)}%`, pctRgb);
+    paint(`${Math.round(pct)}%`, pctRgb) + extra;
+  // Placeholder for a meter whose data hasn't arrived yet: empty track + dim em dash.
+  const barPlaceholder = (label, width) =>
+    paint(label, t.label) + ' ' +
+    (lineStyle ? '' : paint(pcapL, t.dim)) +
+    meter(0, width, t.dim, t.dim, t.ctxEmpty, barG, false) +
+    (lineStyle ? '' : paint(pcapR, t.dim)) + ' ' +
+    paint('—', t.dim);
 
   const textLabels = cfg.labels === 'text';
   // Leading marker for a segment: a worded label (text mode) or a glyph (icon mode).
@@ -367,19 +408,31 @@ function render(input, cfg) {
   const row2 = [];
   if (s.context) {
     row2.push(barSeg(textLabels ? 'Context' : 'ctx', data.ctx, cfg.barWidth, t.ctxFrom, t.ctxTo, true,
-      thresholdRgb(data.ctx, t, cfg.thresholds.warn, cfg.thresholds.crit)));
+      thresholdRgb(data.ctx, t, cfg.thresholds.warn, cfg.thresholds.crit), ' ' + paint('used', t.dim)));
   }
-  if (s.fiveHour && typeof data.five === 'number') {
-    const c = thresholdRgb(data.five, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
-    let seg = barSeg(textLabels ? '5h Usage' : '5h', data.five, cfg.smallBarWidth, c, c, false, c);
-    if (s.fiveHourReset && data.fiveReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.fiveReset)}`, t.dim);
-    row2.push(seg);
+  if (s.fiveHour) {
+    if (typeof data.five === 'number') {
+      const c = thresholdRgb(data.five, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
+      const hint = fmtHoursLeft(data.fiveReset);
+      let seg = barSeg(textLabels ? '5h Usage' : '5h', data.five, cfg.smallBarWidth, c, c, false, c,
+        hint ? ' ' + paint(hint, t.dim) : '');
+      if (s.fiveHourReset && data.fiveReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.fiveReset)}`, t.dim);
+      row2.push(seg);
+    } else {
+      row2.push(barPlaceholder(textLabels ? '5h Usage' : '5h', cfg.smallBarWidth));
+    }
   }
-  if (s.sevenDay && typeof data.seven === 'number') {
-    const c = thresholdRgb(data.seven, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
-    let seg = barSeg(textLabels ? '7d Usage' : '7d', data.seven, cfg.smallBarWidth, c, c, false, c);
-    if (s.sevenDayReset && data.sevenReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.sevenReset)}`, t.dim);
-    row2.push(seg);
+  if (s.sevenDay) {
+    if (typeof data.seven === 'number') {
+      const c = thresholdRgb(data.seven, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
+      const hint = fmtHoursLeft(data.sevenReset);
+      let seg = barSeg(textLabels ? '7d Usage' : '7d', data.seven, cfg.smallBarWidth, c, c, false, c,
+        hint ? ' ' + paint(hint, t.dim) : '');
+      if (s.sevenDayReset && data.sevenReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.sevenReset)}`, t.dim);
+      row2.push(seg);
+    } else {
+      row2.push(barPlaceholder(textLabels ? '7d Usage' : '7d', cfg.smallBarWidth));
+    }
   }
   if (s.cost && data.cost != null) row2.push((textLabels ? paint('Cost ', t.label) : '') + paint(`$${Number(data.cost).toFixed(2)}`, t.cost));
   if (s.tokens && data.tokens) row2.push(lead('Tokens', g.token) + ' ' + paint(fmtTokens(data.tokens), t.text));
@@ -573,6 +626,6 @@ if (isMain) main();
 
 export {
   render, compact, meter, gradientText, visLen, isWide, modelName, contextPct, cachePct,
-  fmtDur, fmtReset, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
+  fmtDur, fmtReset, fmtHoursLeft, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
   THEMES, GLYPHS, DEFAULTS, VERSION,
 };

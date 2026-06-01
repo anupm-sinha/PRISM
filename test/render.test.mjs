@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 import {
-  visLen, fmtDur, fmtTokens, fmtReset, modelName, contextPct, cachePct,
+  visLen, fmtDur, fmtTokens, fmtReset, fmtHoursLeft, modelName, contextPct, cachePct,
   stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, THEMES,
 } from '../prism.mjs';
 
@@ -46,6 +46,16 @@ test('fmtReset counts down or says now', () => {
   assert.equal(fmtReset(0), '');
   assert.equal(fmtReset(Math.floor(Date.now() / 1000) - 10), 'now');
   assert.match(fmtReset(Math.floor(Date.now() / 1000) + 3600), /m$/);
+});
+
+test('fmtHoursLeft brackets whole hours until reset', () => {
+  const now = Math.floor(Date.now() / 1000);
+  assert.equal(fmtHoursLeft(0), '');                 // no epoch
+  assert.equal(fmtHoursLeft(undefined), '');         // missing
+  assert.equal(fmtHoursLeft(now - 10), '');          // already reset
+  assert.equal(fmtHoursLeft(now + 1800), '(<1h)');   // under an hour
+  assert.equal(fmtHoursLeft(now + 2 * 3600), '(~2h)');
+  assert.equal(fmtHoursLeft(now + 100 * 3600), '(~100h)');
 });
 
 test('modelName prefers parsed id, falls back to display name', () => {
@@ -105,6 +115,41 @@ test('renders a full HUD and emits color', () => {
   assert.match(s, /24%/);
   assert.match(s, /\$1\.27/);
   assert.ok(out.includes('\x1b['), 'expected ANSI color codes');
+});
+
+test('context percentage is suffixed with "used"', () => {
+  const s = strip(run({ model: { id: 'claude-opus-4-8' }, context_window: { used_percentage: 38 } }));
+  assert.match(s, /38% used/);
+});
+
+test('5h/7d show an hours-left bracket when reset time is known', () => {
+  const now = Math.floor(Date.now() / 1000);
+  const s = strip(run({
+    model: { id: 'claude-opus-4-8' },
+    context_window: { used_percentage: 38 },
+    rate_limits: {
+      five_hour: { used_percentage: 24, resets_at: now + 2 * 3600 },
+      seven_day: { used_percentage: 41, resets_at: now + 100 * 3600 },
+    },
+  }));
+  assert.match(s, /24% \(~2h\)/);
+  assert.match(s, /41% \(~100h\)/);
+});
+
+test('5h/7d render a placeholder when no rate-limit data has arrived', () => {
+  const s = strip(run({ model: { id: 'claude-opus-4-8' }, context_window: { used_percentage: 10 } }));
+  assert.match(s, /5h.*—/);   // em-dash placeholder keeps the layout complete
+  assert.match(s, /7d.*—/);
+});
+
+test('rate limits persist from cache when a later render omits them', () => {
+  const sid = 'prism-test-cache-' + Date.now();
+  // First render carries live rate-limit data for this session.
+  run({ model: { id: 'claude-opus-4-8' }, session_id: sid, rate_limits: { five_hour: { used_percentage: 24 }, seven_day: { used_percentage: 41 } } });
+  // Second render (same session) omits it — PRISM should reuse the cached values.
+  const s = strip(run({ model: { id: 'claude-opus-4-8' }, session_id: sid }));
+  assert.match(s, /24%/);
+  assert.match(s, /41%/);
 });
 
 test('never throws on empty input', () => {
