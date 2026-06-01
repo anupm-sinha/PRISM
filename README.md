@@ -26,6 +26,7 @@ It's a single **zero‑dependency** Node.js file, inspired by the lovely [METRIC
 - 🎛️ **HUD dashboard layout** — a framed, multi‑line panel that actually looks designed.
 - 🟣 **Gradient context bar** — smooth per‑character truecolor (purple → magenta). Pick solid `block` bars or sleek thin `line` bars; rounded pill caps in Nerd Font mode.
 - 🚦 **Threshold colors** — every metric shifts green → amber → red as it fills.
+- ⏳ **Hours‑left at a glance** — 5h/7d meters show time until the window resets in a `(~Nh)` bracket, and context reads `% used`.
 - 🎨 **Three themes** — `neon` (default), `spectrum`, `mono` — plus fully tunable palettes.
 - 📊 **16 toggleable stats** — context, 5h/7d limits, cost, session, git, tokens, cache %, PR, and more.
 - 🔤 **Nerd Font aware** — crisp powerline/logo glyphs when available, graceful Unicode/ASCII fallback.
@@ -104,8 +105,8 @@ Default loadout is **on**; everything else is a one‑line toggle in `prism.conf
 |------|:------:|-------------|
 | `model` | ✅ | Model name, e.g. `Opus 4.8` |
 | `effort` | ✅ | Reasoning effort (`low`…`max`) |
-| `context` | ✅ | Context‑window gradient bar + % |
-| `fiveHour` / `sevenDay` | ✅ | 5h & 7d rate‑limit meters + % |
+| `context` | ✅ | Context‑window gradient bar + `% used` |
+| `fiveHour` / `sevenDay` | ✅ | 5h & 7d rate‑limit meters + % + `(~Nh)` until reset |
 | `session` | ✅ | Session duration |
 | `cost` | ✅ | Estimated session cost (USD) |
 | `branch` | ✅ | Current git branch |
@@ -165,7 +166,7 @@ echo '{"model":{"id":"claude-opus-4-8"},"context_window":{"used_percentage":38}}
 - **Boxes/▯ instead of icons** — set `"glyphs": "unicode"` (or `"ascii"`); only `"nerd"` needs a Nerd Font.
 - **Status line is blank** — make sure Node is on your `PATH`, and run the command manually to see errors. PRISM never exits non‑zero on bad input.
 - **Right edge looks 1 char off** — a terminal that renders `⚡` as single‑width; switch to a Nerd Font (`"glyphs": "nerd"`) for pixel‑exact frames.
-- **No rate‑limit bars** — `rate_limits` only appears for Claude Pro/Max after the first response in a session.
+- **5h/7d show `—`** — `rate_limits` only appears for Claude Pro/Max after the first response in a session; until then PRISM shows a dim placeholder. Once it arrives, the values are cached per session so the bars stay put on later refreshes.
 
 ## 🙏 Credits
 
