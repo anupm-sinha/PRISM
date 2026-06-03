@@ -29,7 +29,8 @@ It's a single **zero‑dependency** Node.js file, inspired by the lovely [METRIC
 - 🟢 **Update‑aware version dot** — a `●` by the Claude Code version: green when you're current, amber when a newer release exists (hourly npm check, cached; off with `checkUpdate: false`).
 - ⏳ **Hours‑left at a glance** — 5h/7d meters show time until the window resets in a `(~Nh)` bracket, and context reads `% used`.
 - 🎨 **Three themes** — `neon` (default), `spectrum`, `mono` — plus fully tunable palettes.
-- 📊 **16 toggleable stats** — context, 5h/7d limits, cost, session, git, tokens, cache %, PR, and more.
+- 📊 **18 toggleable stats** — context, 5h/7d limits, cost, session, git, tokens, cache %, PR, and more.
+- 🔣 **Text or icon views** — worded labels by default, or compact glyphs via `--view`; `--install-font` adds the full Nerd Font icon set in one command.
 - 🔤 **Nerd Font aware** — crisp powerline/logo glyphs when available, graceful Unicode/ASCII fallback.
 - 📐 **Width‑aware** — collapses to a tidy one‑liner on narrow terminals instead of clipping.
 - 🪶 **Zero dependencies, basically offline** — one file, Node ≥ 18, no telemetry. The only network call is the version dot's hourly Claude‑Code update check on npm; set `checkUpdate: false` to turn even that off.
@@ -152,7 +153,7 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
 {
   "theme": "neon",            // neon | spectrum | mono
   "glyphs": "auto",           // auto | nerd | unicode | ascii
-  "labels": "icon",           // icon (glyphs) | text (5h Usage, Cost, Session…)
+  "labels": "text",           // text (5h Usage, Cost, Session…) | icon (glyphs)
   "align": false,             // align meters row & session row into columns
   "barStyle": "block",        // block | rounded (◖█◗) | pill (flat half-height) | line
   "spacing": 5,               // gap between info groups
@@ -166,7 +167,7 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
 }
 ```
 
-## 🔣 Views: icon (default) & text
+## 🔣 Views: text (default) & icon
 
 PRISM ships in **text view** (worded labels — clean and readable everywhere). Prefer compact glyphs? Switch to **icon view** anytime; with a Nerd Font installed it gives a complete, distinct icon for every field (gauge for context,  hourglass/calendar for 5h/7d,  dollar for cost, clock, git branch, …), and stays box‑safe on plain Unicode without one.
 
