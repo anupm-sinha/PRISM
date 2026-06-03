@@ -35,6 +35,10 @@
   "thresholds":     { "warn": 70, "crit": 90 },   // context window
   "rateThresholds": { "warn": 60, "crit": 80 },   // 5h / 7d rate limits
 
+  // Version dot: hourly npm check for a newer Claude Code (● green = current,
+  // ● amber = update available). Set false to keep PRISM fully offline.
+  "checkUpdate": true,
+
   // Toggle any stat on/off. The defaults below are the "rich, no PR" loadout.
   "stats": {
     "model": true,         // ✳ model name (e.g. Opus 4.8)

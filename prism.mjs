@@ -19,10 +19,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.9.0';
+const VERSION = '1.10.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -145,6 +146,7 @@ const DEFAULTS = {
   smallBarWidth: 6,         // 5h / 7d bar width
   thresholds: { warn: 70, crit: 90 },      // context %
   rateThresholds: { warn: 60, crit: 80 },  // rate-limit %
+  checkUpdate: true,        // dot by the version checks npm for a newer Claude Code (hourly); set false to stay fully offline
   stats: {
     model: true, effort: true, context: true,
     fiveHour: true, sevenDay: true,
@@ -304,6 +306,65 @@ function rateLimits(input, sessionId) {
   return live;
 }
 
+// ──────────────────────────────────────────────── Claude Code update check ──
+// Optional, off-the-render-path: we look up the latest published Claude Code
+// version on npm (cached 1h) so the version dot can flag when an update exists.
+const CC_VERSION_CACHE = path.join(os.homedir(), '.claude', 'prism', '.cc-version-cache.json');
+const CC_VERSION_TTL_MS = 3_600_000; // 1 hour
+
+/** Latest known Claude Code version from the local cache (null if none). */
+function ccLatestVersion() {
+  try { return JSON.parse(fs.readFileSync(CC_VERSION_CACHE, 'utf8')).latest || null; }
+  catch { return null; }
+}
+
+/** GET the latest @anthropic-ai/claude-code version from npm (resolves null on any failure). */
+function fetchCcLatest(timeoutMs = 2000) {
+  return new Promise((resolve) => {
+    try {
+      const req = https.request({
+        hostname: 'registry.npmjs.org', path: '/@anthropic-ai/claude-code/latest',
+        method: 'GET', headers: { Accept: 'application/json' }, timeout: timeoutMs,
+      }, (res) => {
+        let data = '';
+        res.on('data', (c) => { data += c; });
+        res.on('end', () => {
+          if (res.statusCode === 200) { try { resolve(JSON.parse(data).version || null); } catch { resolve(null); } }
+          else resolve(null);
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.end();
+    } catch { resolve(null); }
+  });
+}
+
+/**
+ * Refresh the cached Claude Code version if it's older than the TTL. Always
+ * bumps the timestamp (even on failure) so we retry at most once per TTL, and
+ * keeps the last-known value when offline. Injectable for testing.
+ */
+async function refreshCcVersion(opts = {}) {
+  const cachePath = opts.cachePath || CC_VERSION_CACHE;
+  const fetchLatest = opts.fetchLatest || fetchCcLatest;
+  const now = opts.now || Date.now();
+  let prev = null;
+  try { prev = JSON.parse(fs.readFileSync(cachePath, 'utf8')); } catch { /* none */ }
+  if (prev && now - prev.ts < CC_VERSION_TTL_MS) return prev.latest || null;
+  const latest = await fetchLatest();
+  const next = { ts: now, latest: latest ?? prev?.latest ?? null };
+  try { fs.mkdirSync(path.dirname(cachePath), { recursive: true }); fs.writeFileSync(cachePath, JSON.stringify(next)); } catch { /* ignore */ }
+  return next.latest;
+}
+
+/** Dot color for the version: warn if an update exists, healthy if current/unknown, dim if checking is off. */
+function updateDotRgb(running, latest, t, check) {
+  if (!check) return t.dim;
+  if (running && latest && running !== latest) return t.warn;
+  return t.healthy;
+}
+
 // ───────────────────────────────────────────────────────────────── Render ──
 // Left-aligned eighth blocks give sub-cell resolution for smooth fills.
 const PARTIAL = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'];
@@ -359,12 +420,14 @@ function render(input, cfg) {
     cache: cachePct(input),
     dir: path.basename(cwd || '') || cwd,
     version: input?.version,
+    ccLatest: ccLatestVersion(),
     pr: input?.pr,
   };
 
   // Identity (title) pieces.
-  const brandModel = paint(g.brand, t.brand) + ' ' + paint(data.model, t.model, true)
-    + (s.version && data.version ? '  ' + ESC + '2m' + fg(t.faint || t.dim) + `v${data.version}` + RESET : '')
+  const verDot = updateDotRgb(data.version, data.ccLatest, t, cfg.checkUpdate !== false);
+  const brandModel = paint(g.brand, t.brand) + '  ' + paint(data.model, t.model, true)
+    + (s.version && data.version ? '  ' + paint(g.ver, verDot) + ' ' + paint(`v${data.version}`, t.label) : '')
     + (s.thinking && data.thinking ? ' ' + paint(g.think, t.accent) : '');
   let effortStr = '';
   if (s.effort && data.effort) {
@@ -502,8 +565,8 @@ function render(input, cfg) {
 
 /** Visible model+brand text without color, for width math. */
 function brandModelPlain(data, g, s) {
-  return `${g.brand} ${data.model}`
-    + (s.version && data.version ? `  v${data.version}` : '')
+  return `${g.brand}  ${data.model}`
+    + (s.version && data.version ? `  ${g.ver} v${data.version}` : '')
     + (s.thinking && data.thinking ? ` ${g.think}` : '');
 }
 
@@ -658,6 +721,11 @@ async function main() {
     // Last-resort fallback: never leave the status line blank.
     process.stdout.write(`✳ ${modelName(input)}\n`);
   }
+  // After printing, refresh the Claude Code version cache for the next render
+  // (hourly, bounded, and only when the version dot is actually shown).
+  if (cfg.stats?.version && cfg.checkUpdate !== false) {
+    try { await refreshCcVersion(); } catch { /* never let the update check break us */ }
+  }
 }
 
 const isMain = (() => {
@@ -669,5 +737,6 @@ if (isMain) main();
 export {
   render, compact, meter, gradientText, visLen, isWide, modelName, contextPct, cachePct,
   fmtDur, fmtReset, fmtHoursLeft, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
-  fetchLatestScript, doUpdate, THEMES, GLYPHS, DEFAULTS, VERSION,
+  fetchLatestScript, doUpdate, updateDotRgb, refreshCcVersion, ccLatestVersion,
+  THEMES, GLYPHS, DEFAULTS, VERSION,
 };

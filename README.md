@@ -26,12 +26,13 @@ It's a single **zero‑dependency** Node.js file, inspired by the lovely [METRIC
 - 🎛️ **HUD dashboard layout** — a framed, multi‑line panel that actually looks designed.
 - 🟣 **Gradient context bar** — smooth per‑character truecolor (purple → magenta). Pick solid `block` bars or sleek thin `line` bars; rounded pill caps in Nerd Font mode.
 - 🚦 **Threshold colors** — every metric shifts green → amber → red as it fills.
+- 🟢 **Update‑aware version dot** — a `●` by the Claude Code version: green when you're current, amber when a newer release exists (hourly npm check, cached; off with `checkUpdate: false`).
 - ⏳ **Hours‑left at a glance** — 5h/7d meters show time until the window resets in a `(~Nh)` bracket, and context reads `% used`.
 - 🎨 **Three themes** — `neon` (default), `spectrum`, `mono` — plus fully tunable palettes.
 - 📊 **16 toggleable stats** — context, 5h/7d limits, cost, session, git, tokens, cache %, PR, and more.
 - 🔤 **Nerd Font aware** — crisp powerline/logo glyphs when available, graceful Unicode/ASCII fallback.
 - 📐 **Width‑aware** — collapses to a tidy one‑liner on narrow terminals instead of clipping.
-- 🪶 **Zero dependencies, zero telemetry** — one file, Node ≥ 18, nothing phones home.
+- 🪶 **Zero dependencies, basically offline** — one file, Node ≥ 18, no telemetry. The only network call is the version dot's hourly Claude‑Code update check on npm; set `checkUpdate: false` to turn even that off.
 - 🛟 **Never breaks your prompt** — tolerant of missing/null fields; falls back rather than crashing.
 
 ## 🚀 Install
@@ -139,7 +140,7 @@ Default loadout is **on**; everything else is a one‑line toggle in `prism.conf
 | `cache` | ✅ | Prompt‑cache hit % |
 | `apiTime` | ⬜ | Time spent awaiting the API |
 | `directory` | ⬜ | Current directory name |
-| `version` | ⬜ | Claude Code version |
+| `version` | ⬜ | Claude Code version, with an update dot (● green = current, amber = newer exists) |
 | `pr` | ⬜ | Open PR number + review state |
 | `thinking` | ⬜ | Marker when extended thinking is on |
 
@@ -160,6 +161,7 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
   "smallBarWidth": 6,         // 5h / 7d bar width
   "thresholds":     { "warn": 70, "crit": 90 },  // context %
   "rateThresholds": { "warn": 60, "crit": 80 },  // rate-limit %
+  "checkUpdate": true,        // hourly npm check for the version dot (false = fully offline)
   "stats": { "pr": true, "tokens": true /* … */ }
 }
 ```

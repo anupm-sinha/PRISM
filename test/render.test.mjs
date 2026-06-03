@@ -8,7 +8,8 @@ import os from 'node:os';
 
 import {
   visLen, fmtDur, fmtTokens, fmtReset, fmtHoursLeft, modelName, contextPct, cachePct,
-  stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, fetchLatestScript, doUpdate, THEMES,
+  stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, fetchLatestScript, doUpdate,
+  render, updateDotRgb, DEFAULTS, THEMES,
 } from '../prism.mjs';
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'prism.mjs');
@@ -199,4 +200,24 @@ test('doUpdate overwrites the target file with the fetched script', async () => 
   assert.equal(fs.readFileSync(target, 'utf8'), body);
   fs.rmSync(target, { force: true });
   fs.rmSync(target + '.bak', { force: true });
+});
+
+// ── Version dot / update check ───────────────────────────────────────────────
+test('updateDotRgb signals Claude Code update state', () => {
+  const t = THEMES.neon;
+  assert.deepEqual(updateDotRgb('2.1.0', '2.1.1', t, true), t.warn);     // newer exists
+  assert.deepEqual(updateDotRgb('2.1.1', '2.1.1', t, true), t.healthy);  // up to date
+  assert.deepEqual(updateDotRgb('2.1.1', null, t, true), t.healthy);     // unknown → assume current
+  assert.deepEqual(updateDotRgb('2.1.0', '2.1.1', t, false), t.dim);     // check disabled → neutral
+});
+
+test('version renders an update dot and drops the dim attribute', () => {
+  const cfg = { ...DEFAULTS, stats: { ...DEFAULTS.stats, version: true } };
+  const raw = render({ model: { id: 'claude-opus-4-8' }, version: '2.1.0' }, cfg);
+  assert.match(strip(raw), /● v2\.1\.0/);                       // colored dot before version
+  assert.ok(!raw.includes('\x1b[2m'), 'version should not use the dim (2m) attribute');
+});
+
+test('two spaces separate the model glyph from the model name', () => {
+  assert.match(strip(render({ model: { id: 'claude-opus-4-8' } }, DEFAULTS)), /✳ {2}Opus 4\.8/);
 });
