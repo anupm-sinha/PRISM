@@ -77,6 +77,29 @@ Or add this to `~/.claude/settings.json` yourself (use forward slashes, even on 
 Remove it any time with `node ~/.claude/prism/prism.mjs --uninstall`.
 </details>
 
+## ⬆️ Updating
+
+Already installed? Update in place — your `prism.config.jsonc` is left untouched:
+
+```bash
+node ~/.claude/prism/prism.mjs --update
+```
+
+It downloads the newest `prism.mjs` over the installed one (keeping a `.bak` alongside). **Restart Claude Code** to load it.
+
+Prefer the installer? Re-running the one-liner does the same thing (and re-wires `settings.json`, with a backup):
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/anupm-sinha/PRISM/main/install.ps1 | iex
+```
+```bash
+# macOS / Linux / Git Bash
+curl -fsSL https://raw.githubusercontent.com/anupm-sinha/PRISM/main/install.sh | bash
+```
+
+New options ship with sensible defaults (merged over your config), so updating never requires editing `prism.config.jsonc` to keep working.
+
 ## 🎨 Themes
 
 See all three with sample data — no install required:

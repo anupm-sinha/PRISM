@@ -22,7 +22,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -554,6 +554,46 @@ function doUninstall() {
   } catch { console.log('Nothing to uninstall (no settings.json statusLine found).'); }
 }
 
+// ─────────────────────────────────────────────────────────────── Self-update ──
+const UPDATE_URL = 'https://raw.githubusercontent.com/anupm-sinha/PRISM/main/prism.mjs';
+
+/** Download the latest prism.mjs source, verifying it looks like the real script. */
+async function fetchLatestScript(fetchImpl = fetch) {
+  const res = await fetchImpl(UPDATE_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  if (!/const VERSION = '/.test(text)) throw new Error('unexpected response (not the PRISM script)');
+  return text;
+}
+
+/**
+ * Self-update: fetch the latest prism.mjs from `main` and overwrite this file
+ * (a `.bak` copy is kept). Config is never touched. Returns true on success.
+ * `fetch`/`target`/`log`/`err` are injectable for testing.
+ */
+async function doUpdate(opts = {}) {
+  const fetchImpl = opts.fetch || fetch;
+  const target = opts.target || fileURLToPath(import.meta.url);
+  const log = opts.log || console.log;
+  const err = opts.err || console.error;
+  const verOf = (s) => /const VERSION = '([^']+)'/.exec(s || '')?.[1];
+  try {
+    const text = await fetchLatestScript(fetchImpl);
+    let was = null;
+    try { was = verOf(fs.readFileSync(target, 'utf8')); } catch { /* fresh file */ }
+    try { fs.copyFileSync(target, target + '.bak'); } catch { /* nothing to back up */ }
+    fs.writeFileSync(target, text);
+    const now = verOf(text) || 'latest';
+    log(`✳ PRISM updated${was && was !== now ? ` ${was} → ${now}` : ` to ${now}`} — restart Claude Code to load it.`);
+    return true;
+  } catch (e) {
+    err(`✗ Update failed: ${e.message}`);
+    err('  Re-run the installer instead: https://github.com/anupm-sinha/PRISM#-install');
+    process.exitCode = 1;
+    return false;
+  }
+}
+
 async function readStdin() {
   if (process.stdin.isTTY) return '';
   const chunks = [];
@@ -570,6 +610,7 @@ USAGE
   node prism.mjs --help              Show this help
   node prism.mjs --version           Print version
   node prism.mjs --install           Set PRISM as your Claude Code statusLine
+  node prism.mjs --update            Update prism.mjs in place from the latest release
   node prism.mjs --uninstall         Remove PRISM from your statusLine
 
 CONFIG  (first found wins; all fields optional)
@@ -606,6 +647,7 @@ async function main() {
   if (args.includes('--version') || args.includes('-v')) return console.log(`PRISM ${VERSION}`);
   if (args.includes('--install')) return doInstall();
   if (args.includes('--uninstall')) return doUninstall();
+  if (args.includes('--update')) return doUpdate();
   const cfg = loadConfig();
   if (args.includes('--demo')) return runDemo(cfg);
   let input = {};
@@ -627,5 +669,5 @@ if (isMain) main();
 export {
   render, compact, meter, gradientText, visLen, isWide, modelName, contextPct, cachePct,
   fmtDur, fmtReset, fmtHoursLeft, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
-  THEMES, GLYPHS, DEFAULTS, VERSION,
+  fetchLatestScript, doUpdate, THEMES, GLYPHS, DEFAULTS, VERSION,
 };

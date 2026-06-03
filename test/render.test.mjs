@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import fs from 'node:fs';
+import os from 'node:os';
 
 import {
   visLen, fmtDur, fmtTokens, fmtReset, fmtHoursLeft, modelName, contextPct, cachePct,
-  stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, THEMES,
+  stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, fetchLatestScript, doUpdate, THEMES,
 } from '../prism.mjs';
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'prism.mjs');
@@ -166,4 +168,35 @@ test('falls back to a single compact line on a narrow terminal', () => {
   const s = strip(run({ model: { id: 'claude-opus-4-8' }, context_window: { used_percentage: 50 } }, { COLUMNS: '28' }));
   assert.ok(!s.includes('╭'), 'compact mode should not draw a box');
   assert.match(s, /Opus 4\.8/);
+});
+
+// ── Self-update ──────────────────────────────────────────────────────────────
+test('fetchLatestScript returns the script text on a good response', async () => {
+  const body = "#!/usr/bin/env node\nconst VERSION = '9.9.9';\n";
+  const fakeFetch = async () => ({ ok: true, text: async () => body });
+  assert.equal(await fetchLatestScript(fakeFetch), body);
+});
+
+test('fetchLatestScript throws on a non-OK response', async () => {
+  const fakeFetch = async () => ({ ok: false, status: 503, text: async () => '' });
+  await assert.rejects(() => fetchLatestScript(fakeFetch), /503/);
+});
+
+test('fetchLatestScript rejects content that is not the PRISM script', async () => {
+  const fakeFetch = async () => ({ ok: true, text: async () => '<html>not found</html>' });
+  await assert.rejects(() => fetchLatestScript(fakeFetch), /PRISM/);
+});
+
+test('doUpdate overwrites the target file with the fetched script', async () => {
+  const target = path.join(os.tmpdir(), `prism-update-test-${Date.now()}.mjs`);
+  fs.writeFileSync(target, "const VERSION = '0.0.0';\n");
+  const body = "const VERSION = '9.9.9';\n";
+  const ok = await doUpdate({
+    fetch: async () => ({ ok: true, text: async () => body }),
+    target, log: () => {}, err: () => {},
+  });
+  assert.equal(ok, true);
+  assert.equal(fs.readFileSync(target, 'utf8'), body);
+  fs.rmSync(target, { force: true });
+  fs.rmSync(target + '.bak', { force: true });
 });
