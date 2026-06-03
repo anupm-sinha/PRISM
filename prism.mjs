@@ -23,7 +23,7 @@ import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.11.0';
+const VERSION = '1.11.1';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -145,7 +145,7 @@ function resolveGlyphs(mode) {
 const DEFAULTS = {
   theme: 'neon',
   glyphs: 'auto',           // auto | nerd | unicode | ascii
-  labels: 'icon',           // "icon" (compact glyphs) or "text" (worded: 5h Usage, Cost, …)
+  labels: 'text',           // "text" (worded: 5h Usage, Cost, …) or "icon" (compact glyphs)
   align: false,             // align row 2 & row 3 into shared columns (grid)
   spacing: 5,               // spaces between info groups (breathing room)
   minWidth: 60,             // minimum panel width — keeps it from rendering tiny on first load

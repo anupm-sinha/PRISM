@@ -1,6 +1,6 @@
 {
   "name": "prism-statusline",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "description": "A colorful HUD status line for Claude Code — model, reasoning effort, context window, 5h/7d rate limits, cost and git, with neon themes. Zero dependencies.",
   "type": "module",
   "bin": {

@@ -12,8 +12,9 @@
   // Set "nerd" if you run a Nerd Font; "ascii" for maximum compatibility.
   "glyphs": "auto",
 
-  // Labels: "icon" (compact glyphs) or "text" (worded — 5h Usage, Cost, Session…).
-  "labels": "icon",
+  // Labels: "text" (worded — 5h Usage, Cost, Session…) or "icon" (compact glyphs).
+  // Switch anytime with:  node prism.mjs --view icon|text
+  "labels": "text",
 
   // Align the meters row and session row into shared columns.
   "align": false,

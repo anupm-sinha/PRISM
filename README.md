@@ -168,7 +168,7 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
 
 ## 🔣 Views: icon (default) & text
 
-PRISM ships in **icon view**. Out of the box it uses plain Unicode so it renders everywhere; installing a Nerd Font upgrades it to a complete, distinct icon for every field (gauge for context,  hourglass/calendar for 5h/7d,  dollar for cost, clock, git branch, …). Prefer words? Switch to **text view** anytime.
+PRISM ships in **text view** (worded labels — clean and readable everywhere). Prefer compact glyphs? Switch to **icon view** anytime; with a Nerd Font installed it gives a complete, distinct icon for every field (gauge for context,  hourglass/calendar for 5h/7d,  dollar for cost, clock, git branch, …), and stays box‑safe on plain Unicode without one.
 
 **Switch views (no file editing):**
 

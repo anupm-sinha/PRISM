@@ -222,6 +222,12 @@ test('two spaces separate the model glyph from the model name', () => {
   assert.match(strip(render({ model: { id: 'claude-opus-4-8' } }, DEFAULTS)), /✳ {2}Opus 4\.8/);
 });
 
+test('default view is text (worded labels)', () => {
+  assert.equal(DEFAULTS.labels, 'text');
+  const out = strip(render({ model: { id: 'claude-opus-4-8' }, context_window: { used_percentage: 38 } }, DEFAULTS));
+  assert.match(out, /Context/);   // worded label, not "ctx"
+});
+
 // ── Full icon coverage ───────────────────────────────────────────────────────
 test('icon mode + nerd glyphs iconizes context / 5h / 7d / cost', () => {
   const cfg = { ...DEFAULTS, labels: 'icon', glyphs: 'nerd', stats: { ...DEFAULTS.stats, version: false } };
