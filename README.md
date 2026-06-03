@@ -166,15 +166,29 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
 }
 ```
 
-## 🔤 Nerd Fonts
+## 🔣 Views: icon (default) & text
 
-PRISM defaults to plain Unicode so it looks right everywhere. If you run a [Nerd Font](https://www.nerdfonts.com/), opt into crisp powerline/logo glyphs:
+PRISM ships in **icon view**. Out of the box it uses plain Unicode so it renders everywhere; installing a Nerd Font upgrades it to a complete, distinct icon for every field (gauge for context,  hourglass/calendar for 5h/7d,  dollar for cost, clock, git branch, …). Prefer words? Switch to **text view** anytime.
 
-```jsonc
-{ "glyphs": "nerd" }
+**Switch views (no file editing):**
+
+```bash
+node ~/.claude/prism/prism.mjs --view text    # worded labels
+node ~/.claude/prism/prism.mjs --view icon    # icon labels
+node ~/.claude/prism/prism.mjs --view         # toggle
 ```
 
-…or set `PRISM_GLYPHS=nerd` in your environment. No special font? `auto` and `unicode` have you covered; `ascii` is there for the strictest terminals.
+It edits your `prism.config.jsonc` (`labels`) in place — comments preserved, backup kept — and hot‑reloads on the next refresh.
+
+**Get the full Nerd Font icons (one command, no admin):**
+
+```bash
+node ~/.claude/prism/prism.mjs --install-font
+```
+
+This downloads **CaskaydiaCove Nerd Font**, installs it into your per‑user font folder (Windows 10+/macOS/Linux), and sets `glyphs:"nerd"` + icon view for you. The only step PRISM can't do for you: **set your terminal's font to "CaskaydiaCove Nerd Font Mono"**, then restart the terminal.
+
+Rather do it by hand? Set `{ "glyphs": "nerd" }` (or `PRISM_GLYPHS=nerd`) after installing any [Nerd Font](https://www.nerdfonts.com/). No special font? `auto`/`unicode` are box‑safe; `ascii` covers the strictest terminals.
 
 ## 🛠️ How it works
 

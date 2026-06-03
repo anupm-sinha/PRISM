@@ -9,7 +9,7 @@ import os from 'node:os';
 import {
   visLen, fmtDur, fmtTokens, fmtReset, fmtHoursLeft, modelName, contextPct, cachePct,
   stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, fetchLatestScript, doUpdate,
-  render, updateDotRgb, DEFAULTS, THEMES,
+  render, updateDotRgb, setJsoncValue, fontInstallDir, DEFAULTS, THEMES,
 } from '../prism.mjs';
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'prism.mjs');
@@ -220,4 +220,51 @@ test('version renders an update dot and drops the dim attribute', () => {
 
 test('two spaces separate the model glyph from the model name', () => {
   assert.match(strip(render({ model: { id: 'claude-opus-4-8' } }, DEFAULTS)), /✳ {2}Opus 4\.8/);
+});
+
+// ── Full icon coverage ───────────────────────────────────────────────────────
+test('icon mode + nerd glyphs iconizes context / 5h / 7d / cost', () => {
+  const cfg = { ...DEFAULTS, labels: 'icon', glyphs: 'nerd', stats: { ...DEFAULTS.stats, version: false } };
+  const out = strip(render({
+    model: { id: 'claude-opus-4-8' }, context_window: { used_percentage: 38 },
+    cost: { total_cost_usd: 1.2 },
+    rate_limits: { five_hour: { used_percentage: 24 }, seven_day: { used_percentage: 41 } },
+  }, cfg));
+  for (const cp of [0xf0e4, 0xf252, 0xf073, 0xf155].map((c) => String.fromCharCode(c))) {
+    assert.ok(out.includes(cp), `expected nerd glyph`);
+  }
+  assert.ok(!/\bctx\b/.test(out), 'nerd icon mode should not show "ctx" text');
+});
+
+test('icon mode + unicode glyphs stays box-safe (cache → ≣, ctx kept as text)', () => {
+  const cfg = { ...DEFAULTS, labels: 'icon', glyphs: 'unicode', stats: { ...DEFAULTS.stats, version: false } };
+  const out = strip(render({
+    model: { id: 'claude-opus-4-8' },
+    context_window: { used_percentage: 38, current_usage: { input_tokens: 25, cache_read_input_tokens: 75, cache_creation_input_tokens: 0 } },
+  }, cfg));
+  assert.match(out, /\bctx\b/);
+  assert.match(out, /≣/);
+});
+
+// ── Config view switching ────────────────────────────────────────────────────
+test('setJsoncValue replaces an existing key and preserves comments', () => {
+  const src = '{\n  "theme": "neon",\n  "labels": "text", // mine\n  "spacing": 5\n}\n';
+  const out = setJsoncValue(src, 'labels', 'icon');
+  assert.match(out, /"labels":\s*"icon"/);
+  assert.match(out, /\/\/ mine/);
+  assert.equal(JSON.parse(stripJsonc(out)).labels, 'icon');
+  assert.equal(JSON.parse(stripJsonc(out)).theme, 'neon');
+});
+
+test('setJsoncValue inserts a missing key', () => {
+  const out = setJsoncValue('{\n  "theme": "neon"\n}\n', 'labels', 'icon');
+  assert.equal(JSON.parse(stripJsonc(out)).labels, 'icon');
+  assert.equal(JSON.parse(stripJsonc(out)).theme, 'neon');
+});
+
+// ── Font install dir ─────────────────────────────────────────────────────────
+test('fontInstallDir resolves the per-user font dir per platform', () => {
+  assert.match(fontInstallDir('darwin', { home: '/Users/x' }), /^\/Users\/x\/Library\/Fonts$/);
+  assert.match(fontInstallDir('linux', { home: '/home/x' }), /\.local\/share\/fonts$/);
+  assert.match(fontInstallDir('win32', { home: 'C:\\Users\\x', localAppData: 'C:\\Users\\x\\AppData\\Local' }), /Microsoft\\Windows\\Fonts$/);
 });

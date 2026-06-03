@@ -23,7 +23,7 @@ import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.10.0';
+const VERSION = '1.11.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -124,6 +124,14 @@ const GLYPHS = {
   nerd:    { brand: '', effort: '', clock: '', branch: '', barL: '', barR: '', fill: '█', empty: '░', add: '+', del: '−', reset: '', sep: '·', pr: '', think: '', token: '', cache: '', ver: '', tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
 };
 
+// Per-field markers for icon mode (the meter/cost labels). Added separately so the
+// Nerd Font codepoints use explicit escapes and don't disturb the sets above.
+// Unicode/ASCII keep short text where no well-supported glyph exists (cost reads
+// from its own "$"); Nerd Font gets a distinct icon for every field.
+Object.assign(GLYPHS.unicode, { ctx: 'ctx', five: '5h', seven: '7d', cost: '' });
+Object.assign(GLYPHS.ascii,   { ctx: 'ctx', five: '5h', seven: '7d', cost: '' });
+Object.assign(GLYPHS.nerd,    { ctx: '', five: '', seven: '', cost: '' }); // gauge · hourglass · calendar · dollar
+
 function resolveGlyphs(mode) {
   let m = (mode || 'auto').toLowerCase();
   if (m === 'auto') {
@@ -207,6 +215,30 @@ function loadConfig() {
   } catch {
     return DEFAULTS; // never break the status line over a bad config
   }
+}
+
+/** Set `"key": "value"` in JSONC source — replaces an existing string value or inserts it. Comments survive. */
+function setJsoncValue(src, key, value) {
+  const re = new RegExp(`("${key}"\\s*:\\s*)"[^"]*"`);
+  if (re.test(src)) return src.replace(re, `$1"${value}"`);
+  return src.replace(/\{/, `{\n  "${key}": "${value}",`);
+}
+
+/** The config file PRISM writes to: the first one it finds, else the standard install path. */
+function writableConfigPath() {
+  return findConfig() || path.join(os.homedir(), '.claude', 'prism', 'prism.config.jsonc');
+}
+
+/** Apply key→value updates to the writable config (backs it up first). Returns the path written. */
+function updateConfigFile(updates) {
+  const file = writableConfigPath();
+  let src = '{\n}\n';
+  try { src = fs.readFileSync(file, 'utf8'); } catch { /* will create */ }
+  for (const [k, v] of Object.entries(updates)) src = setJsoncValue(src, k, v);
+  try { if (fs.existsSync(file)) fs.copyFileSync(file, file + '.bak'); } catch { /* ignore */ }
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, src);
+  return file;
 }
 
 // ─────────────────────────────────────────────────────── Data extraction ──
@@ -470,40 +502,44 @@ function render(input, cfg) {
   // Row 2: context + rate-limit meters (with optional reset countdowns).
   const row2 = [];
   if (s.context) {
-    row2.push(barSeg(textLabels ? 'Context' : 'ctx', data.ctx, cfg.barWidth, t.ctxFrom, t.ctxTo, true,
+    row2.push(barSeg(textLabels ? 'Context' : g.ctx, data.ctx, cfg.barWidth, t.ctxFrom, t.ctxTo, true,
       thresholdRgb(data.ctx, t, cfg.thresholds.warn, cfg.thresholds.crit), ' ' + paint('used', t.dim)));
   }
   if (s.fiveHour) {
     if (typeof data.five === 'number') {
       const c = thresholdRgb(data.five, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
       const hint = fmtHoursLeft(data.fiveReset);
-      let seg = barSeg(textLabels ? '5h Usage' : '5h', data.five, cfg.smallBarWidth, c, c, false, c,
+      let seg = barSeg(textLabels ? '5h Usage' : g.five, data.five, cfg.smallBarWidth, c, c, false, c,
         hint ? ' ' + paint(hint, t.dim) : '');
       if (s.fiveHourReset && data.fiveReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.fiveReset)}`, t.dim);
       row2.push(seg);
     } else {
-      row2.push(barPlaceholder(textLabels ? '5h Usage' : '5h', cfg.smallBarWidth));
+      row2.push(barPlaceholder(textLabels ? '5h Usage' : g.five, cfg.smallBarWidth));
     }
   }
   if (s.sevenDay) {
     if (typeof data.seven === 'number') {
       const c = thresholdRgb(data.seven, t, cfg.rateThresholds.warn, cfg.rateThresholds.crit);
       const hint = fmtHoursLeft(data.sevenReset);
-      let seg = barSeg(textLabels ? '7d Usage' : '7d', data.seven, cfg.smallBarWidth, c, c, false, c,
+      let seg = barSeg(textLabels ? '7d Usage' : g.seven, data.seven, cfg.smallBarWidth, c, c, false, c,
         hint ? ' ' + paint(hint, t.dim) : '');
       if (s.sevenDayReset && data.sevenReset) seg += ' ' + paint(`${g.reset} ${fmtReset(data.sevenReset)}`, t.dim);
       row2.push(seg);
     } else {
-      row2.push(barPlaceholder(textLabels ? '7d Usage' : '7d', cfg.smallBarWidth));
+      row2.push(barPlaceholder(textLabels ? '7d Usage' : g.seven, cfg.smallBarWidth));
     }
   }
-  if (s.cost && data.cost != null) row2.push((textLabels ? paint('Cost ', t.label) : '') + paint(`$${Number(data.cost).toFixed(2)}`, t.cost));
+  if (s.cost && data.cost != null) {
+    const amt = Number(data.cost).toFixed(2);
+    const lbl = textLabels ? paint('Cost ', t.label) : (g.cost ? paint(g.cost + ' ', t.label) : '');
+    row2.push(lbl + paint((g.cost && !textLabels) ? amt : `$${amt}`, t.cost));
+  }
   if (s.tokens && data.tokens) row2.push(lead('Tokens', g.token) + ' ' + paint(fmtTokens(data.tokens), t.text));
 
   // Row 3 (optional second line): session, cache, git and meta.
   const row3 = [];
   if (s.session && data.durMs != null) row3.push(lead('Session', g.clock) + ' ' + paint(fmtDur(data.durMs), t.time));
-  if (s.cache && data.cache != null) row3.push(paint(textLabels ? 'Cache' : 'cache', t.label) + ' ' + paint(`${Math.round(data.cache)}%`, t.accent));
+  if (s.cache && data.cache != null) row3.push(paint(textLabels ? 'Cache' : g.cache, t.label) + ' ' + paint(`${Math.round(data.cache)}%`, t.accent));
   if (s.apiTime && data.apiMs) row3.push(paint(textLabels ? 'API' : 'api', t.label) + ' ' + paint(fmtDur(data.apiMs), t.dim));
   if (s.branch) {
     const b = data.dir && input?.workspace ? gitBranch(cwd, input?.session_id) : '';
@@ -657,6 +693,103 @@ async function doUpdate(opts = {}) {
   }
 }
 
+// ────────────────────────────────────────────────────── View switch & fonts ──
+/** Flip the label view between 'icon' and 'text' (bare arg toggles). Edits config. */
+function doSetView(arg) {
+  let view = (arg || '').toLowerCase();
+  if (view !== 'icon' && view !== 'text') {
+    let cur = 'icon';
+    try { cur = JSON.parse(stripJsonc(fs.readFileSync(writableConfigPath(), 'utf8'))).labels || 'icon'; } catch { /* default icon */ }
+    view = cur === 'icon' ? 'text' : 'icon';
+  }
+  const file = updateConfigFile({ labels: view });
+  console.log(`✳ PRISM view → ${view}   (${file})`);
+  if (view === 'icon') console.log('  For the full icon set, run:  node prism.mjs --install-font');
+}
+
+/** Per-user font install directory for the platform (injectable env for testing). */
+function fontInstallDir(platform, env = {}) {
+  const home = env.home || os.homedir();
+  if (platform === 'win32') {
+    const lad = env.localAppData || process.env.LOCALAPPDATA || path.win32.join(home, 'AppData', 'Local');
+    return path.win32.join(lad, 'Microsoft', 'Windows', 'Fonts');
+  }
+  if (platform === 'darwin') return path.posix.join(home, 'Library', 'Fonts');
+  return path.posix.join(home, '.local', 'share', 'fonts');
+}
+
+const FONT_LABEL = 'CaskaydiaCove Nerd Font Mono';
+const FONT_ZIP_URL = 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/CascadiaCode.zip';
+
+/** Download `url` to `dest`, following redirects (GitHub release assets redirect). */
+function downloadTo(url, dest, redirects = 6) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'PRISM' } }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
+        res.resume();
+        return resolve(downloadTo(res.headers.location, dest, redirects - 1));
+      }
+      if (res.statusCode !== 200) { res.resume(); return reject(new Error(`HTTP ${res.statusCode}`)); }
+      const out = fs.createWriteStream(dest);
+      res.pipe(out);
+      out.on('finish', () => out.close(() => resolve()));
+      out.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
+/** Extract a .zip using whatever the OS provides (bsdtar → unzip → PowerShell). */
+function extractZip(zip, dest) {
+  const attempts = [
+    `tar -xf "${zip}" -C "${dest}"`,
+    `unzip -o "${zip}" -d "${dest}"`,
+    `powershell -NoProfile -Command "Expand-Archive -Force -Path '${zip}' -DestinationPath '${dest}'"`,
+  ];
+  let last;
+  for (const cmd of attempts) { try { execSync(cmd, { stdio: 'ignore' }); return; } catch (e) { last = e; } }
+  throw new Error('could not unzip (need tar, unzip, or PowerShell)');
+}
+
+/** Register a font for the current user on Windows so apps see it without a reboot. */
+function registerFontWindows(file, fullPath) {
+  try {
+    execSync(`reg add "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts" /v "${file.replace(/\.ttf$/i, '')} (TrueType)" /t REG_SZ /d "${fullPath}" /f`, { stdio: 'ignore' });
+  } catch { /* the copied file is still selectable after a relog */ }
+}
+
+/** Download + install CaskaydiaCove Nerd Font into the per-user font dir (no admin), then switch to nerd icons. */
+async function doInstallFont() {
+  const dir = fontInstallDir(process.platform);
+  const tmp = path.join(os.tmpdir(), `prism-font-${Date.now()}`);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(tmp, { recursive: true });
+    const zip = path.join(tmp, 'font.zip');
+    console.log(`✳ Downloading ${FONT_LABEL} …`);
+    await downloadTo(FONT_ZIP_URL, zip);
+    console.log('  Extracting …');
+    extractZip(zip, tmp);
+    const ttfs = fs.readdirSync(tmp).filter((f) => /\.ttf$/i.test(f));
+    const pick = ttfs.find((f) => /Mono.*Regular/i.test(f)) || ttfs.find((f) => /Regular/i.test(f)) || ttfs[0];
+    if (!pick) throw new Error('no .ttf found in the archive');
+    const target = path.join(dir, pick);
+    fs.copyFileSync(path.join(tmp, pick), target);
+    if (process.platform === 'win32') registerFontWindows(pick, target);
+    if (process.platform === 'linux') { try { execSync('fc-cache -f', { stdio: 'ignore' }); } catch { /* optional */ } }
+    const cf = updateConfigFile({ glyphs: 'nerd', labels: 'icon' });
+    console.log(`✳ Installed ${pick} → ${dir}`);
+    console.log(`  Config set to icon + nerd glyphs   (${cf})`);
+    console.log(`  Last step (only you can do this): set your terminal font to "${FONT_LABEL}", then restart the terminal.`);
+  } catch (e) {
+    console.error(`✗ Font install failed: ${e.message}`);
+    console.error('  Install manually: https://www.nerdfonts.com/font-downloads  (choose "CaskaydiaCove"),');
+    console.error('  then run:  node prism.mjs --view icon');
+    process.exitCode = 1;
+  } finally {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
+  }
+}
+
 async function readStdin() {
   if (process.stdin.isTTY) return '';
   const chunks = [];
@@ -674,6 +807,8 @@ USAGE
   node prism.mjs --version           Print version
   node prism.mjs --install           Set PRISM as your Claude Code statusLine
   node prism.mjs --update            Update prism.mjs in place from the latest release
+  node prism.mjs --view icon|text    Switch label view (bare --view toggles)
+  node prism.mjs --install-font      Install CaskaydiaCove Nerd Font + switch to icon glyphs
   node prism.mjs --uninstall         Remove PRISM from your statusLine
 
 CONFIG  (first found wins; all fields optional)
@@ -711,6 +846,9 @@ async function main() {
   if (args.includes('--install')) return doInstall();
   if (args.includes('--uninstall')) return doUninstall();
   if (args.includes('--update')) return doUpdate();
+  if (args.includes('--install-font')) return doInstallFont();
+  const viewIdx = args.indexOf('--view');
+  if (viewIdx !== -1) return doSetView(args[viewIdx + 1]);
   const cfg = loadConfig();
   if (args.includes('--demo')) return runDemo(cfg);
   let input = {};
@@ -738,5 +876,6 @@ export {
   render, compact, meter, gradientText, visLen, isWide, modelName, contextPct, cachePct,
   fmtDur, fmtReset, fmtHoursLeft, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
   fetchLatestScript, doUpdate, updateDotRgb, refreshCcVersion, ccLatestVersion,
+  setJsoncValue, fontInstallDir,
   THEMES, GLYPHS, DEFAULTS, VERSION,
 };
