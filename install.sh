@@ -12,6 +12,9 @@ curl -fsSL "$repo/prism.mjs" -o "$dest/prism.mjs"
 
 if [ ! -f "$dest/prism.config.jsonc" ]; then
   curl -fsSL "$repo/prism.config.jsonc" -o "$dest/prism.config.jsonc"
+else
+  # Upgrade: add any new config options, leaving your existing settings untouched.
+  node "$dest/prism.mjs" --sync-config
 fi
 
 # Wire it into Claude Code's settings.json (creates a backup).

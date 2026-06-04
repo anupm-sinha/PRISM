@@ -23,7 +23,7 @@ import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.12.0';
+const VERSION = '1.13.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -239,6 +239,57 @@ function updateConfigFile(updates) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, src);
   return file;
+}
+
+/**
+ * Insert keys present in `defaults` but missing from JSONC `src`, preserving the
+ * user's existing values, comments and formatting. Handles top-level keys and one
+ * level of nesting (e.g. new entries under `stats`). Returns `{ text, added }`,
+ * where `added` lists the dotted names inserted (empty → nothing changed).
+ */
+function syncConfigText(src, defaults) {
+  let parsed;
+  try { parsed = JSON.parse(stripJsonc(src)); } catch { parsed = {}; }
+  const added = [];
+  let out = src;
+  const insertTop = (s, k, v) => s.replace(/\{/, `{\n  "${k}": ${JSON.stringify(v)},`);
+  const insertNested = (s, p, k, v) =>
+    s.replace(new RegExp(`("${p}"\\s*:\\s*\\{)`), `$1\n    "${k}": ${JSON.stringify(v)},`);
+  for (const [k, v] of Object.entries(defaults)) {
+    if (!(k in parsed)) { out = insertTop(out, k, v); added.push(k); }
+  }
+  for (const [k, v] of Object.entries(defaults)) {
+    if (isObj(v) && isObj(parsed[k])) {
+      for (const [sk, sv] of Object.entries(v)) {
+        if (!(sk in parsed[k])) { out = insertNested(out, k, sk, sv); added.push(`${k}.${sk}`); }
+      }
+    }
+  }
+  return { text: out, added };
+}
+
+/**
+ * Upgrade path: bring an installed config up to date with the current DEFAULTS by
+ * adding any new options, without touching the user's existing values. A `.bak` is
+ * kept only when something actually changes. `target`/`defaults`/`log` are
+ * injectable for testing. Returns `{ file, added }`.
+ */
+function doSyncConfig(opts = {}) {
+  const target = opts.target || writableConfigPath();
+  const defaults = opts.defaults || DEFAULTS;
+  const log = opts.log || console.log;
+  let src = '{\n}\n';
+  try { src = fs.readFileSync(target, 'utf8'); } catch { /* will create */ }
+  const { text, added } = syncConfigText(src, defaults);
+  if (!added.length) {
+    log(`✳ PRISM config already up to date — ${target}`);
+    return { file: target, added };
+  }
+  try { if (fs.existsSync(target)) fs.copyFileSync(target, target + '.bak'); } catch { /* ignore */ }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, text);
+  log(`✳ PRISM config synced (+${added.length}: ${added.join(', ')}) — ${target}`);
+  return { file: target, added };
 }
 
 // ─────────────────────────────────────────────────────── Data extraction ──
@@ -868,6 +919,7 @@ USAGE
   node prism.mjs --version           Print version
   node prism.mjs --install           Set PRISM as your Claude Code statusLine
   node prism.mjs --update            Update prism.mjs in place from the latest release
+  node prism.mjs --sync-config       Add new config options without touching your settings
   node prism.mjs --preset [text|icon] Apply the signature PRISM look (bare → text)
   node prism.mjs --view icon|text    Switch label view (bare --view toggles)
   node prism.mjs --install-font      Install CaskaydiaCove Nerd Font + switch to icon glyphs
@@ -908,6 +960,7 @@ async function main() {
   if (args.includes('--install')) return doInstall();
   if (args.includes('--uninstall')) return doUninstall();
   if (args.includes('--update')) return doUpdate();
+  if (args.includes('--sync-config')) return doSyncConfig();
   if (args.includes('--install-font')) return doInstallFont();
   const viewIdx = args.indexOf('--view');
   if (viewIdx !== -1) return doSetView(args[viewIdx + 1]);
@@ -941,5 +994,6 @@ export {
   fmtDur, fmtReset, fmtHoursLeft, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
   fetchLatestScript, doUpdate, updateDotRgb, refreshCcVersion, ccLatestVersion,
   setJsoncValue, fontInstallDir, presetConfig, presetText, doPreset,
+  syncConfigText, doSyncConfig,
   THEMES, GLYPHS, DEFAULTS, VERSION,
 };
