@@ -153,7 +153,7 @@ Default loadout is **on**; everything else is a one‑line toggle in `prism.conf
 | `cache` | ✅ | Prompt‑cache hit % |
 | `apiTime` | ⬜ | Time spent awaiting the API |
 | `directory` | ⬜ | Current directory name |
-| `version` | ⬜ | Claude Code version, with an update dot (● green = current, amber = newer exists) |
+| `version` | ✅ | Claude Code version, with an update dot (● green = current, amber = newer exists) |
 | `pr` | ⬜ | Open PR number + review state |
 | `thinking` | ⬜ | Marker when extended thinking is on |
 
@@ -167,7 +167,7 @@ PRISM looks for `prism.config.jsonc` next to the script, then in `~/.claude/pris
   "glyphs": "auto",           // auto | nerd | unicode | ascii
   "labels": "text",           // text (5h Usage, Cost, Session…) | icon (glyphs)
   "align": false,             // align meters row & session row into columns
-  "barStyle": "block",        // block | rounded (◖█◗) | pill (flat half-height) | line
+  "barStyle": "pill",         // block (█) | rounded (◖█◗) | pill (flat half-height) | line
   "spacing": 5,               // gap between info groups
   "minWidth": 60,             // min panel width (no tiny box on first load)
   "barWidth": 16,             // context bar width
