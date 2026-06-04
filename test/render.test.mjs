@@ -10,7 +10,7 @@ import {
   visLen, fmtDur, fmtTokens, fmtReset, fmtHoursLeft, modelName, contextPct, cachePct,
   stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, fetchLatestScript, doUpdate,
   render, updateDotRgb, setJsoncValue, fontInstallDir, DEFAULTS, THEMES,
-  presetConfig, presetText, doPreset,
+  presetConfig, presetText, doPreset, syncConfigText, doSyncConfig,
 } from '../prism.mjs';
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'prism.mjs');
@@ -237,6 +237,66 @@ test('doPreset writes the preset and backs up an existing config', () => {
   assert.equal(fs.readFileSync(target + '.bak', 'utf8'), '{ "theme": "mono" }\n');
   fs.rmSync(target, { force: true });
   fs.rmSync(target + '.bak', { force: true });
+});
+
+// ── Config sync / upgrade ─────────────────────────────────────────────────────
+test('syncConfigText adds a missing top-level key and preserves values + comments', () => {
+  const src = '{\n  "theme": "mono" // mine\n}\n';
+  const { text, added } = syncConfigText(src, { theme: 'neon', barStyle: 'pill' });
+  assert.deepEqual(added, ['barStyle']);
+  const parsed = JSON.parse(stripJsonc(text));
+  assert.equal(parsed.theme, 'mono');     // user value preserved (not overwritten by default)
+  assert.equal(parsed.barStyle, 'pill');  // missing default inserted
+  assert.match(text, /\/\/ mine/);        // comment survives
+});
+
+test('syncConfigText adds a missing nested stats key and preserves comments', () => {
+  const src = '{\n  "stats": {\n    "model": false // off\n  }\n}\n';
+  const { text, added } = syncConfigText(src, { stats: { model: true, version: true } });
+  assert.deepEqual(added, ['stats.version']);
+  const parsed = JSON.parse(stripJsonc(text));
+  assert.equal(parsed.stats.model, false);   // preserved
+  assert.equal(parsed.stats.version, true);  // added
+  assert.match(text, /\/\/ off/);            // comment survives
+});
+
+test('syncConfigText is a no-op when every key already exists', () => {
+  const src = '{ "theme": "neon", "barStyle": "pill" }';
+  const { text, added } = syncConfigText(src, { theme: 'x', barStyle: 'y' });
+  assert.deepEqual(added, []);
+  assert.equal(text, src);   // untouched, comments and all
+});
+
+test('syncConfigText result equals a deep-merge of defaults under the user config', () => {
+  const defaults = { theme: 'neon', barStyle: 'pill', stats: { a: true, b: false, c: true } };
+  const src = '{ "theme": "mono", "stats": { "a": false } }';
+  const { text } = syncConfigText(src, defaults);
+  const parsed = JSON.parse(stripJsonc(text));
+  assert.deepEqual(parsed, deepMerge(defaults, JSON.parse(stripJsonc(src))));
+});
+
+test('doSyncConfig writes the merged config and backs up the original when keys are added', () => {
+  const target = path.join(os.tmpdir(), `prism-sync-test-${Date.now()}.jsonc`);
+  fs.writeFileSync(target, '{ "theme": "mono" }\n');
+  const res = doSyncConfig({ target, defaults: { theme: 'neon', barStyle: 'pill' }, log: () => {} });
+  assert.deepEqual(res.added, ['barStyle']);
+  const parsed = JSON.parse(stripJsonc(fs.readFileSync(target, 'utf8')));
+  assert.equal(parsed.theme, 'mono');
+  assert.equal(parsed.barStyle, 'pill');
+  assert.equal(fs.readFileSync(target + '.bak', 'utf8'), '{ "theme": "mono" }\n');
+  fs.rmSync(target, { force: true });
+  fs.rmSync(target + '.bak', { force: true });
+});
+
+test('doSyncConfig leaves the file and makes no backup when nothing is missing', () => {
+  const target = path.join(os.tmpdir(), `prism-sync-noop-${Date.now()}.jsonc`);
+  const original = '{ "theme": "neon", "barStyle": "pill" }\n';
+  fs.writeFileSync(target, original);
+  const res = doSyncConfig({ target, defaults: { theme: 'x', barStyle: 'y' }, log: () => {} });
+  assert.deepEqual(res.added, []);
+  assert.equal(fs.readFileSync(target, 'utf8'), original);
+  assert.equal(fs.existsSync(target + '.bak'), false);
+  fs.rmSync(target, { force: true });
 });
 
 // ── Version dot / update check ───────────────────────────────────────────────

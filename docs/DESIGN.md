@@ -24,7 +24,7 @@ but visually richer and architecturally simpler.
 | Default view | **text** (worded labels); compact `icon` glyphs are one command away (`--view`) |
 | Version dot | `●` by the Claude Code version flags updates — green current, amber newer (hourly npm check, cached; `checkUpdate:false` disables) |
 | Fonts | `--install-font` adds CaskaydiaCove Nerd Font (per-user, no admin) for the full icon set |
-| Self-update | `--update` replaces the installed script in place from `main` (keeps a `.bak`) |
+| Self-update | `--update` replaces the script in place from `main`; `--sync-config` adds new options to your config (re-running the installer does both) — both keep a `.bak` |
 
 ## Layout
 
@@ -79,8 +79,12 @@ blocks output.
 - Public repo, **MIT** licensed.
 - One-line installers (`install.ps1`, `install.sh`) that drop the script into
   `~/.claude/prism/` and patch `settings.json` via the script's own `--install`.
+  Re-running them is an **idempotent upgrade**: refresh the script, then
+  `--sync-config` to merge any new options into an existing config.
 - `--demo` renders sample data across every theme for screenshots.
-- `--update` self-updates the script from `main`; `--view icon|text` flips the
+- `--update` self-updates the script from `main`; `--sync-config` inserts any
+  newly-released config keys without disturbing the user's values or comments
+  (top-level + nested, comma-safe, `.bak` on change); `--view icon|text` flips the
   label view (surgical JSONC edit, comments preserved); `--install-font`
   installs CaskaydiaCove Nerd Font into the per-user font dir (no admin).
 

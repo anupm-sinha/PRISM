@@ -81,15 +81,7 @@ Remove it any time with `node ~/.claude/prism/prism.mjs --uninstall`.
 
 ## ⬆️ Updating
 
-Already installed? Update in place — your `prism.config.jsonc` is left untouched:
-
-```bash
-node ~/.claude/prism/prism.mjs --update
-```
-
-It downloads the newest `prism.mjs` over the installed one (keeping a `.bak` alongside). **Restart Claude Code** to load it.
-
-Prefer the installer? Re-running the one-liner does the same thing (and re-wires `settings.json`, with a backup):
+**Recommended — re-run the installer.** It's idempotent: it refreshes `prism.mjs`, **adds any newly-released config options** to your `prism.config.jsonc` (your existing settings *and comments* are kept; a `.bak` is saved), and re-wires `settings.json`. One command to get latest, on a machine that already has PRISM:
 
 ```powershell
 # Windows (PowerShell)
@@ -100,7 +92,21 @@ irm https://raw.githubusercontent.com/anupm-sinha/PRISM/main/install.ps1 | iex
 curl -fsSL https://raw.githubusercontent.com/anupm-sinha/PRISM/main/install.sh | bash
 ```
 
-New options ship with sensible defaults (merged over your config), so updating never requires editing `prism.config.jsonc` to keep working.
+**Script only** — newest `prism.mjs`, config left untouched:
+
+```bash
+node ~/.claude/prism/prism.mjs --update
+```
+
+It keeps a `.bak` alongside. Note this does **not** pull new config defaults on its own — run `--sync-config` (or re-run the installer) for that.
+
+**Config only** — add newly-released options without changing your settings:
+
+```bash
+node ~/.claude/prism/prism.mjs --sync-config
+```
+
+**Restart Claude Code** after updating to load the new script.
 
 ## 🎛️ Preset — the signature look in one command
 
