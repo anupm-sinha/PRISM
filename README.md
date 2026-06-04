@@ -102,6 +102,18 @@ curl -fsSL https://raw.githubusercontent.com/anupm-sinha/PRISM/main/install.sh |
 
 New options ship with sensible defaults (merged over your config), so updating never requires editing `prism.config.jsonc` to keep working.
 
+## 🎛️ Preset — the signature look in one command
+
+Want the exact HUD from the screenshot on any machine, without hand‑editing config? Apply the preset:
+
+```bash
+node ~/.claude/prism/prism.mjs --preset text   # worded labels (default)
+node ~/.claude/prism/prism.mjs --preset icon   # compact glyph labels
+node ~/.claude/prism/prism.mjs --preset        # same as --preset text
+```
+
+It writes the signature config — neon theme, slim pill bars, and a focused loadout (model · effort · context · 5h · 7d · cost · tokens · version dot) — to your `prism.config.jsonc` (backing up any existing file to `.bak`). It **hot‑reloads** on the next refresh, no restart needed. Tweak anything afterward; flip labels later with `--view`.
+
 ## 🎨 Themes
 
 See all three with sample data — no install required:
