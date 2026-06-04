@@ -23,7 +23,7 @@ import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.11.1';
+const VERSION = '1.12.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -707,6 +707,67 @@ function doSetView(arg) {
   if (view === 'icon') console.log('  For the full icon set, run:  node prism.mjs --install-font');
 }
 
+// ──────────────────────────────────────────────────────────────── Preset ──
+/**
+ * The signature PRISM look — neon, slim pill bars, a focused stat loadout
+ * (context / 5h / 7d / cost / tokens + version dot). `labels` picks worded
+ * 'text' or compact 'icon'. Returns a plain config object.
+ */
+function presetConfig(labels = 'text') {
+  const view = (labels || '').toLowerCase() === 'icon' ? 'icon' : 'text';
+  return {
+    theme: 'neon',
+    glyphs: 'unicode',
+    labels: view,
+    align: false,
+    spacing: 5,
+    minWidth: 60,
+    barStyle: 'pill',
+    barWidth: 10,
+    smallBarWidth: 6,
+    thresholds: { warn: 70, crit: 90 },
+    rateThresholds: { warn: 60, crit: 80 },
+    stats: {
+      model: true, effort: true, context: true,
+      fiveHour: true, sevenDay: true,
+      fiveHourReset: false, sevenDayReset: false,
+      session: false, cost: true, branch: false, lines: false,
+      tokens: true, cache: false, apiTime: false,
+      directory: false, version: true, pr: false, thinking: false,
+    },
+  };
+}
+
+/** Render the preset as a JSONC file (comment header + pretty JSON body). */
+function presetText(labels = 'text') {
+  const header =
+`// ╭───────────────────────────────────────────────────────────────────╮
+// │  PRISM config — written by \`node prism.mjs --preset\`. This is the    │
+// │  signature look. Edit freely; changes hot-reload (no restart).       │
+// │  Switch labels any time:  node prism.mjs --view icon|text            │
+// ╰───────────────────────────────────────────────────────────────────╯
+`;
+  return header + JSON.stringify(presetConfig(labels), null, 2) + '\n';
+}
+
+/**
+ * Write the preset config to the writable config path (backs up any existing
+ * file to `.bak` first). `target`/`log` are injectable for testing.
+ * Bare arg → 'text'; 'icon' selects compact glyph labels.
+ */
+function doPreset(arg, opts = {}) {
+  const labels = (arg || '').toLowerCase() === 'icon' ? 'icon' : 'text';
+  const target = opts.target || writableConfigPath();
+  const log = opts.log || console.log;
+  try { if (fs.existsSync(target)) fs.copyFileSync(target, target + '.bak'); } catch { /* nothing to back up */ }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, presetText(labels));
+  log(`✳ PRISM preset applied (${labels} labels) — ${target}`);
+  log('  Hot-reloads on the next status-line refresh; no restart needed.');
+  log('  Switch labels later with:  node prism.mjs --view icon|text');
+  return target;
+}
+
 /** Per-user font install directory for the platform (injectable env for testing). */
 function fontInstallDir(platform, env = {}) {
   const home = env.home || os.homedir();
@@ -807,6 +868,7 @@ USAGE
   node prism.mjs --version           Print version
   node prism.mjs --install           Set PRISM as your Claude Code statusLine
   node prism.mjs --update            Update prism.mjs in place from the latest release
+  node prism.mjs --preset [text|icon] Apply the signature PRISM look (bare → text)
   node prism.mjs --view icon|text    Switch label view (bare --view toggles)
   node prism.mjs --install-font      Install CaskaydiaCove Nerd Font + switch to icon glyphs
   node prism.mjs --uninstall         Remove PRISM from your statusLine
@@ -849,6 +911,8 @@ async function main() {
   if (args.includes('--install-font')) return doInstallFont();
   const viewIdx = args.indexOf('--view');
   if (viewIdx !== -1) return doSetView(args[viewIdx + 1]);
+  const presetIdx = args.indexOf('--preset');
+  if (presetIdx !== -1) return doPreset(args[presetIdx + 1]);
   const cfg = loadConfig();
   if (args.includes('--demo')) return runDemo(cfg);
   let input = {};
@@ -876,6 +940,6 @@ export {
   render, compact, meter, gradientText, visLen, isWide, modelName, contextPct, cachePct,
   fmtDur, fmtReset, fmtHoursLeft, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
   fetchLatestScript, doUpdate, updateDotRgb, refreshCcVersion, ccLatestVersion,
-  setJsoncValue, fontInstallDir,
+  setJsoncValue, fontInstallDir, presetConfig, presetText, doPreset,
   THEMES, GLYPHS, DEFAULTS, VERSION,
 };

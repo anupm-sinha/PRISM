@@ -10,6 +10,7 @@ import {
   visLen, fmtDur, fmtTokens, fmtReset, fmtHoursLeft, modelName, contextPct, cachePct,
   stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, fetchLatestScript, doUpdate,
   render, updateDotRgb, setJsoncValue, fontInstallDir, DEFAULTS, THEMES,
+  presetConfig, presetText, doPreset,
 } from '../prism.mjs';
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'prism.mjs');
@@ -198,6 +199,42 @@ test('doUpdate overwrites the target file with the fetched script', async () => 
   });
   assert.equal(ok, true);
   assert.equal(fs.readFileSync(target, 'utf8'), body);
+  fs.rmSync(target, { force: true });
+  fs.rmSync(target + '.bak', { force: true });
+});
+
+// ── Preset ───────────────────────────────────────────────────────────────────
+test('presetConfig is the signature look; labels follow the arg', () => {
+  const text = presetConfig('text');
+  assert.equal(text.labels, 'text');
+  assert.equal(text.theme, 'neon');
+  assert.equal(text.barStyle, 'pill');
+  assert.equal(text.barWidth, 10);
+  // Focused loadout: these on, these off.
+  assert.equal(text.stats.tokens, true);
+  assert.equal(text.stats.version, true);
+  assert.equal(text.stats.session, false);
+  assert.equal(text.stats.branch, false);
+  assert.equal(text.stats.lines, false);
+  assert.equal(text.stats.cache, false);
+  // Bare/unknown → text; only 'icon' flips labels.
+  assert.equal(presetConfig().labels, 'text');
+  assert.equal(presetConfig('icon').labels, 'icon');
+  assert.equal(presetConfig('nonsense').labels, 'text');
+});
+
+test('presetText is parseable JSONC that round-trips to presetConfig', () => {
+  const parsed = JSON.parse(stripJsonc(presetText('icon')));
+  assert.deepEqual(parsed, presetConfig('icon'));
+});
+
+test('doPreset writes the preset and backs up an existing config', () => {
+  const target = path.join(os.tmpdir(), `prism-preset-test-${Date.now()}.jsonc`);
+  fs.writeFileSync(target, '{ "theme": "mono" }\n');
+  const out = doPreset('text', { target, log: () => {} });
+  assert.equal(out, target);
+  assert.deepEqual(JSON.parse(stripJsonc(fs.readFileSync(target, 'utf8'))), presetConfig('text'));
+  assert.equal(fs.readFileSync(target + '.bak', 'utf8'), '{ "theme": "mono" }\n');
   fs.rmSync(target, { force: true });
   fs.rmSync(target + '.bak', { force: true });
 });
