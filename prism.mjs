@@ -149,7 +149,7 @@ const DEFAULTS = {
   align: false,             // align row 2 & row 3 into shared columns (grid)
   spacing: 5,               // spaces between info groups (breathing room)
   minWidth: 60,             // minimum panel width — keeps it from rendering tiny on first load
-  barStyle: 'block',        // "block" (solid █) or "line" (sleek thin ━)
+  barStyle: 'pill',         // "block" (█), "rounded" (◖█◗), "pill" (slim ▬), or "line" (thin ━)
   barWidth: 16,             // context bar width in cells
   smallBarWidth: 6,         // 5h / 7d bar width
   thresholds: { warn: 70, crit: 90 },      // context %
@@ -161,7 +161,7 @@ const DEFAULTS = {
     fiveHourReset: false, sevenDayReset: false,
     session: true, cost: true, branch: true, lines: true,
     tokens: true, cache: true, apiTime: false,
-    directory: false, version: false, pr: false, thinking: false,
+    directory: false, version: true, pr: false, thinking: false,
   },
 };
 

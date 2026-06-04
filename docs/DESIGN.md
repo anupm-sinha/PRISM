@@ -49,9 +49,9 @@ but visually richer and architecturally simpler.
 ## Default stat loadout
 
 On by default: `model`, `effort`, `context`, `fiveHour`, `sevenDay`, `session`,
-`cost`, `branch`, `lines`, `tokens`, `cache`. Off by default (one flag away):
-reset countdowns, `apiTime`, `directory`, `version`, `pr`, `thinking`. When
-`version` is on, an update-aware `●` dot precedes it.
+`cost`, `branch`, `lines`, `tokens`, `cache`, `version`. Off by default (one flag
+away): reset countdowns, `apiTime`, `directory`, `pr`, `thinking`. When `version`
+is on, an update-aware `●` dot precedes it.
 
 ## Architecture
 

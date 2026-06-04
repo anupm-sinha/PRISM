@@ -26,7 +26,7 @@
   "minWidth": 60,
 
   // Bar look: "block" (█), "rounded" (◖█◗), "pill" (flat ▬ half-height), or "line" (thin ━).
-  "barStyle": "block",
+  "barStyle": "pill",
 
   // Bar widths, in cells.
   "barWidth": 16,        // context bar
@@ -57,7 +57,7 @@
     "cache": true,         // prompt-cache hit %
     "apiTime": false,      // time spent awaiting the API
     "directory": false,    // current directory name
-    "version": false,      // Claude Code version (shown in the title row)
+    "version": true,       // Claude Code version + update dot (shown in the title row)
     "pr": false,           // open PR number + review state
     "thinking": false      // ✦ marker when extended thinking is on
   }
