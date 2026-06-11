@@ -84,9 +84,11 @@ blocks output.
 - `--demo` renders sample data across every theme for screenshots.
 - `--update` self-updates the script from `main`; `--sync-config` inserts any
   newly-released config keys without disturbing the user's values or comments
-  (top-level + nested, comma-safe, `.bak` on change); `--view icon|text` flips the
-  label view (surgical JSONC edit, comments preserved); `--install-font`
-  installs CaskaydiaCove Nerd Font into the per-user font dir (no admin).
+  (top-level + nested, comma-safe, `.bak` on change); `--reset-config` overwrites
+  the config with the current defaults (the way back from a `--preset` loadout,
+  `.bak` kept); `--view icon|text` flips the label view (surgical JSONC edit,
+  comments preserved); `--install-font` installs CaskaydiaCove Nerd Font into the
+  per-user font dir (no admin).
 
 ## Testing
 

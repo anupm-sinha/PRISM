@@ -23,7 +23,7 @@ import https from 'node:https';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const VERSION = '1.13.0';
+const VERSION = '1.14.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ───────────────────────────────────────────────────────────── ANSI helpers ──
@@ -290,6 +290,35 @@ function doSyncConfig(opts = {}) {
   fs.writeFileSync(target, text);
   log(`✳ PRISM config synced (+${added.length}: ${added.join(', ')}) — ${target}`);
   return { file: target, added };
+}
+
+/** The default config as JSONC text (comment header + the in-code defaults). */
+function defaultConfigText(defaults = DEFAULTS) {
+  const header =
+`// ╭───────────────────────────────────────────────────────────────────╮
+// │  PRISM config — reset to defaults. Edit freely; changes hot-reload.  │
+// │  Restore this look anytime:  node prism.mjs --reset-config           │
+// ╰───────────────────────────────────────────────────────────────────╯
+`;
+  return header + JSON.stringify(defaults, null, 2) + '\n';
+}
+
+/**
+ * Reset the config to the current defaults, overwriting any customizations (a
+ * `.bak` is kept). Unlike `--sync-config` (which only adds missing keys), this is
+ * the "give me the standard look back" command. `target`/`defaults`/`log` are
+ * injectable for testing. Returns the path written.
+ */
+function doResetConfig(opts = {}) {
+  const target = opts.target || writableConfigPath();
+  const defaults = opts.defaults || DEFAULTS;
+  const log = opts.log || console.log;
+  try { if (fs.existsSync(target)) fs.copyFileSync(target, target + '.bak'); } catch { /* nothing to back up */ }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, defaultConfigText(defaults));
+  log(`✳ PRISM config reset to defaults — ${target}`);
+  log('  Hot-reloads on the next status-line refresh; no restart needed.');
+  return target;
 }
 
 // ─────────────────────────────────────────────────────── Data extraction ──
@@ -920,6 +949,7 @@ USAGE
   node prism.mjs --install           Set PRISM as your Claude Code statusLine
   node prism.mjs --update            Update prism.mjs in place from the latest release
   node prism.mjs --sync-config       Add new config options without touching your settings
+  node prism.mjs --reset-config      Overwrite your config with the current defaults (keeps a .bak)
   node prism.mjs --preset [text|icon] Apply the signature PRISM look (bare → text)
   node prism.mjs --view icon|text    Switch label view (bare --view toggles)
   node prism.mjs --install-font      Install CaskaydiaCove Nerd Font + switch to icon glyphs
@@ -961,6 +991,7 @@ async function main() {
   if (args.includes('--uninstall')) return doUninstall();
   if (args.includes('--update')) return doUpdate();
   if (args.includes('--sync-config')) return doSyncConfig();
+  if (args.includes('--reset-config')) return doResetConfig();
   if (args.includes('--install-font')) return doInstallFont();
   const viewIdx = args.indexOf('--view');
   if (viewIdx !== -1) return doSetView(args[viewIdx + 1]);
@@ -994,6 +1025,6 @@ export {
   fmtDur, fmtReset, fmtHoursLeft, fmtTokens, stripJsonc, deepMerge, resolveGlyphs, thresholdRgb,
   fetchLatestScript, doUpdate, updateDotRgb, refreshCcVersion, ccLatestVersion,
   setJsoncValue, fontInstallDir, presetConfig, presetText, doPreset,
-  syncConfigText, doSyncConfig,
+  syncConfigText, doSyncConfig, defaultConfigText, doResetConfig,
   THEMES, GLYPHS, DEFAULTS, VERSION,
 };

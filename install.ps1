@@ -23,3 +23,4 @@ node (Join-Path $dest 'prism.mjs') --install
 Write-Host ''
 Write-Host '✳ PRISM installed. Restart Claude Code to see your new status line.'
 Write-Host '  Nerd Font user? Set  "glyphs": "nerd"  in:' $cfg
+Write-Host '  Want the standard look back after customizing?  node "'$dest'\prism.mjs" --reset-config'
