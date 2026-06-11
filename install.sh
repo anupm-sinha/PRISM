@@ -23,3 +23,4 @@ node "$dest/prism.mjs" --install
 echo ''
 echo '✳ PRISM installed. Restart Claude Code to see your new status line.'
 echo "  Nerd Font user? Set  \"glyphs\": \"nerd\"  in $dest/prism.config.jsonc"
+echo '  Want the standard look back after customizing?  node "'"$dest"'/prism.mjs" --reset-config'

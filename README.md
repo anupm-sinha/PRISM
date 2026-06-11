@@ -106,6 +106,14 @@ It keeps a `.bak` alongside. Note this does **not** pull new config defaults on 
 node ~/.claude/prism/prism.mjs --sync-config
 ```
 
+**Reset to defaults** — overwrite your config with the current standard look (handy if you experimented with `--preset` and want the full loadout back). Keeps a `.bak`:
+
+```bash
+node ~/.claude/prism/prism.mjs --reset-config
+```
+
+`--sync-config` only *adds* missing keys (it preserves your choices), so it won't undo a `--preset` loadout — that's what `--reset-config` is for.
+
 **Restart Claude Code** after updating to load the new script.
 
 ## 🎛️ Preset — the signature look in one command
@@ -118,7 +126,7 @@ node ~/.claude/prism/prism.mjs --preset icon   # compact glyph labels
 node ~/.claude/prism/prism.mjs --preset        # same as --preset text
 ```
 
-It writes the signature config — neon theme, slim pill bars, and a focused loadout (model · effort · context · 5h · 7d · cost · tokens · version dot) — to your `prism.config.jsonc` (backing up any existing file to `.bak`). It **hot‑reloads** on the next refresh, no restart needed. Tweak anything afterward; flip labels later with `--view`.
+It writes the signature config — neon theme, slim pill bars, and a focused loadout (model · effort · context · 5h · 7d · cost · tokens · version dot) — to your `prism.config.jsonc` (backing up any existing file to `.bak`). It **hot‑reloads** on the next refresh, no restart needed. Tweak anything afterward; flip labels later with `--view`, or run `--reset-config` to return to the full default loadout.
 
 ## 🎨 Themes
 

@@ -11,6 +11,7 @@ import {
   stripJsonc, deepMerge, thresholdRgb, resolveGlyphs, fetchLatestScript, doUpdate,
   render, updateDotRgb, setJsoncValue, fontInstallDir, DEFAULTS, THEMES,
   presetConfig, presetText, doPreset, syncConfigText, doSyncConfig,
+  defaultConfigText, doResetConfig,
 } from '../prism.mjs';
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'prism.mjs');
@@ -295,6 +296,36 @@ test('doSyncConfig leaves the file and makes no backup when nothing is missing',
   const res = doSyncConfig({ target, defaults: { theme: 'x', barStyle: 'y' }, log: () => {} });
   assert.deepEqual(res.added, []);
   assert.equal(fs.readFileSync(target, 'utf8'), original);
+  assert.equal(fs.existsSync(target + '.bak'), false);
+  fs.rmSync(target, { force: true });
+});
+
+// ── Config reset ──────────────────────────────────────────────────────────────
+test('defaultConfigText is parseable JSONC that round-trips to the defaults', () => {
+  const defaults = { theme: 'neon', barStyle: 'pill', stats: { model: true, version: true } };
+  const parsed = JSON.parse(stripJsonc(defaultConfigText(defaults)));
+  assert.deepEqual(parsed, defaults);
+});
+
+test('doResetConfig overwrites a customized config with defaults and backs it up', () => {
+  const target = path.join(os.tmpdir(), `prism-reset-test-${Date.now()}.jsonc`);
+  const original = '{ "barStyle": "block", "stats": { "session": false } }\n';
+  fs.writeFileSync(target, original);
+  const defaults = { theme: 'neon', barStyle: 'pill', stats: { session: true, version: true } };
+  const out = doResetConfig({ target, defaults, log: () => {} });
+  assert.equal(out, target);
+  assert.deepEqual(JSON.parse(stripJsonc(fs.readFileSync(target, 'utf8'))), defaults);
+  assert.equal(fs.readFileSync(target + '.bak', 'utf8'), original);   // original preserved
+  fs.rmSync(target, { force: true });
+  fs.rmSync(target + '.bak', { force: true });
+});
+
+test('doResetConfig writes defaults when no config exists yet (no backup)', () => {
+  const target = path.join(os.tmpdir(), `prism-reset-fresh-${Date.now()}.jsonc`);
+  fs.rmSync(target, { force: true });
+  const defaults = { theme: 'neon', barStyle: 'pill' };
+  doResetConfig({ target, defaults, log: () => {} });
+  assert.deepEqual(JSON.parse(stripJsonc(fs.readFileSync(target, 'utf8'))), defaults);
   assert.equal(fs.existsSync(target + '.bak'), false);
   fs.rmSync(target, { force: true });
 });
